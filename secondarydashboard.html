@@ -263,19 +263,21 @@
 
     <script>
         // --- FIREBASE & API CONFIG ---
+       // --- FIREBASE CONFIG ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            // We will inject these via Vercel later
+            apiKey: window.ENV_FIREBASE_KEY || "", 
             authDomain: "fridgewise-37166.firebaseapp.com",
             databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
             projectId: "fridgewise-37166",
             storageBucket: "fridgewise-37166.firebasestorage.app",
             messagingSenderId: "367251387454",
-            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f",
+            measurementId: "G-122HEMEYBR"
         };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const auth = firebase.auth();
-        const API_KEY = "AIzaSyDgM-qux49wz_X24jdM8-BChykEAwWBkDc";
+        
+        let ingredients = [];
+        // We remove API_KEY entirely because we will call a local /api route instead
         
         let currentMealName = "";
         let currentUser = null;
