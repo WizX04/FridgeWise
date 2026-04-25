@@ -538,60 +538,58 @@
             }
         }
 
-auth.onAuthStateChanged((user) => {
+// 1. Global state
+let activeUser = null;
 
-    const urlParams = new URLSearchParams(window.location.search);
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                activeUser = user;
+                currentUser = user;
+                document.body.classList.remove('loading');
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const mealToOpen = urlParams.get('open');
+                if (mealToOpen) {
+                    handleMealSelection(decodeURIComponent(mealToOpen));
+                }
+                
+                document.getElementById('leftSidebarContainer')?.classList.remove('hidden');
+                document.getElementById('logoutBtn')?.classList.remove('hidden');
+            } else {
+                if (!window.location.pathname.includes("index.html")) {
+                    window.location.href = "index.html";
+                }
+            }
+        });
 
-    const mealToOpen = urlParams.get('open');
+        // 3. PUT THE HANDLE FUNCTION HERE (Between Auth and openMeal)
+        async function handleMealSelection(mealName) {
+            if (!activeUser) {
+                alert("Session expired. Please login again.");
+                window.location.href = "index.html";
+                return;
+            }
 
+            const newUrl = `${window.location.pathname}?open=${encodeURIComponent(mealName)}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
 
-    if (!user) {
+            const header = document.getElementById('overviewMealName'); // Use this specific ID from your HTML
+            if(header) header.innerText = mealName;
 
-        // If truly no user, redirect to login
-        window.location.href = "index.html";
-        return;
-    }
+            await openMealFromUrl(mealName);
+        }
 
-    // USER IS LOGGED IN - Reveal the page now
-    document.body.classList.remove('loading');
-    currentUser = user;
+        // 4. YOUR EXISTING OPEN MEAL FUNCTION
+        function openMealFromUrl(mealName) {
+            document.getElementById('mainDashboard').classList.add('hidden');
+            document.getElementById('mealOverview').classList.remove('hidden');
+            document.getElementById('overviewMealName').textContent = mealName;
 
-    // ... rest of your profile UI logic ...
+            if (typeof fetchRecipeDetails === "function") {
+                fetchRecipeDetails(mealName); 
+            }
+        }
 
-
-
-    if (mealToOpen) {
-
-        openMealFromUrl(decodeURIComponent(mealToOpen));
-
-    }
-
-    
-
-    // Ensure sidebar elements are visible
-
-    document.getElementById('leftSidebarContainer').classList.remove('hidden');
-
-    document.getElementById('logoutBtn').classList.remove('hidden');
-
-});
-        
-function openMealFromUrl(mealName) {
-    // 1. UI Switch: Hide Dashboard, Show Overview
-    document.getElementById('mainDashboard').classList.add('hidden');
-    document.getElementById('mealOverview').classList.remove('hidden');
-    
-    // 2. Set Title
-    document.getElementById('overviewMealName').textContent = mealName;
-
-    // 3. Trigger your Fetch logic
-    // Make sure 'fetchRecipeDetails' is defined somewhere in your script!
-    if (typeof fetchRecipeDetails === "function") {
-        fetchRecipeDetails(mealName); 
-    } else {
-        console.error("fetchRecipeDetails function not found!");
-    }
-}
         function updateProfileUI(name, email) {
             document.getElementById('userNameDisplay').textContent = name;
             document.getElementById('userEmailDisplay').textContent = email;
