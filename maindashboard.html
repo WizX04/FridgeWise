@@ -755,5 +755,13 @@
             if (mealToOpen) openMealOverview(decodeURIComponent(mealToOpen));
         };
     </script>
+    <script>
+    // Initialize Firebase before the external logic loads
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
+</script>
+
+<script src="dashboard-logic.js"></script>
 </body>
 </html>
