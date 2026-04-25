@@ -543,31 +543,25 @@ auth.onAuthStateChanged((user) => {
     const mealToOpen = urlParams.get('open');
 
     if (!user) {
+        // If truly no user, redirect to login
         window.location.href = "index.html";
         return;
     }
 
-    // User is authenticated
+    // USER IS LOGGED IN - Reveal the page now
+    document.body.classList.remove('loading');
     currentUser = user;
 
-    // 1. Handle Profile UI
-    database.ref('users/' + user.uid).once('value').then((snapshot) => {
-        const data = snapshot.val();
-        const name = (data && data.username) ? data.username : (user.displayName || "User");
-        updateProfileUI(name, user.email);
-    });
+    // ... rest of your profile UI logic ...
 
-    // 2. Setup Sidebar & Logout Button Visibility
-    document.getElementById('leftSidebarContainer').classList.remove('hidden');
-    document.getElementById('brandLogo').classList.add('hidden');
-    document.getElementById('logoutBtn').classList.remove('hidden'); // Moved inside the listener
-
-    // 3. Check if we need to deep-link into a recipe
     if (mealToOpen) {
         openMealFromUrl(decodeURIComponent(mealToOpen));
     }
-}); // This closing bracket was correctly placed here.
-
+    
+    // Ensure sidebar elements are visible
+    document.getElementById('leftSidebarContainer').classList.remove('hidden');
+    document.getElementById('logoutBtn').classList.remove('hidden');
+});
 function openMealFromUrl(mealName) {
     // 1. UI Switch: Hide Dashboard, Show Overview
     document.getElementById('mainDashboard').classList.add('hidden');
