@@ -588,15 +588,32 @@ let isAuthReady = false; // Add this to track if Firebase is "awake"
 }
 
         // 4. YOUR EXISTING OPEN MEAL FUNCTION
-        function openMealFromUrl(mealName) {
-            document.getElementById('mainDashboard').classList.add('hidden');
-            document.getElementById('mealOverview').classList.remove('hidden');
-            document.getElementById('overviewMealName').textContent = mealName;
+       function openMealFromUrl(mealName) {
+    if (!mealName) return;
 
-            if (typeof fetchRecipeDetails === "function") {
-                fetchRecipeDetails(mealName); 
-            }
-        }
+    // 1. Force the UI Switch
+    const mainDash = document.getElementById('mainDashboard');
+    const mealOver = document.getElementById('mealOverview');
+    
+    if (mainDash && mealOver) {
+        mainDash.classList.add('hidden');
+        mealOver.classList.remove('hidden');
+    }
+
+    // 2. Update the Title
+    const titleElem = document.getElementById('overviewMealName');
+    if (titleElem) titleElem.textContent = mealName;
+    currentMealName = mealName;
+
+    // 3. The Fetch Trigger
+    // Ensure your fetchRecipeDetails function is ready to receive this
+    if (typeof fetchRecipeDetails === "function") {
+        console.log("Fetching data for:", mealName);
+        fetchRecipeDetails(mealName); 
+    } else {
+        console.error("fetchRecipeDetails is not defined in this scope!");
+    }
+}
 
         function updateProfileUI(name, email) {
             document.getElementById('userNameDisplay').textContent = name;
