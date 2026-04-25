@@ -632,42 +632,59 @@ function openMealFromUrl(mealName) {
 
         async function fetchRecipeDetails(mealName) {
     const mealDesc = document.getElementById('mealDesc');
-    mealDesc.innerHTML = `<span class="typing">Chef Linguini is using Gemini 3.1 Flash-Lite for <b>${mealName}</b>...</span>`;
+    
+    // UI Feedback
+    mealDesc.innerHTML = `<span class="text-blue-500 animate-pulse">Chef Linguini is preparing ${mealName}...</span>`;
 
-    // Prompt specifically optimized for Flash-Lite's speed
-    const userPrompt = `Generate a recipe for "${mealName}".`;
+    const payload = {
+        // System instruction forces the model to stay in "Chef Mode"
+        system_instruction: {
+            parts: [{ text: "You are a professional chef. When the user provides a food name, output a recipe strictly in JSON format. Use these keys: chef_note, ingredients, nutrition, steps, analysis, addons. No conversational filler." }]
+        },
+        contents: [{ 
+            parts: [{ text: `Generate a complete recipe for: ${mealName}` }] 
+        }],
+        generationConfig: {
+            response_mime_type: "application/json"
+        }
+    };
 
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${firebaseConfig.apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                // Using system_instruction helps keep the "Lite" model focused
-                system_instruction: { 
-                    parts: [{ text: "You are a professional chef. Always output data in this JSON format: { 'chef_note': '', 'ingredients': [], 'nutrition': '', 'steps': [], 'analysis': '', 'addons': '' }" }]
-                },
-                contents: [{ parts: [{ text: userPrompt }] }],
-                generationConfig: {
-                    response_mime_type: "application/json" // Flash-Lite handles structured JSON perfectly
-                }
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
-        const recipe = JSON.parse(data.candidates[0].content.parts[0].text);
         
-        // Directly map the JSON keys to your UI
-        document.getElementById('mealDesc').innerText = recipe.chef_note;
-        const boxes = document.querySelectorAll('.accordion-content');
-        boxes[0].innerHTML = recipe.ingredients.join('<br>');
-        boxes[1].innerHTML = recipe.nutrition;
-        boxes[2].innerHTML = recipe.steps.join('<br>');
-        boxes[3].innerHTML = recipe.analysis;
-        boxes[4].innerHTML = recipe.addons;
-
+        // Handle the Flash-Lite JSON response
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const recipe = JSON.parse(data.candidates[0].content.parts[0].text);
+            updateDashboardUI(recipe);
+        }
     } catch (error) {
-        console.error("API Error:", error);
-        mealDesc.innerText = "Error loading recipe.";
+        console.error("Fetch Error:", error);
+        mealDesc.innerText = "Error loading recipe. Check console for details.";
+    }
+}
+
+function updateDashboardUI(recipe) {
+    // 1. Update Chef's Note
+    document.getElementById('mealDesc').innerText = recipe.chef_note || "Recipe loaded!";
+
+    // 2. Map JSON to your specific accordion sections
+    const accordionContents = document.querySelectorAll('.accordion-content');
+    
+    // Helper to format arrays into readable lists
+    const formatList = (item) => Array.isArray(item) ? item.join('<br>') : item;
+
+    if (accordionContents.length >= 5) {
+        accordionContents[0].innerHTML = `<div class="p-4">${formatList(recipe.ingredients)}</div>`;
+        accordionContents[1].innerHTML = `<div class="p-4">${recipe.nutrition}</div>`;
+        accordionContents[2].innerHTML = `<div class="p-4">${formatList(recipe.steps)}</div>`;
+        accordionContents[3].innerHTML = `<div class="p-4">${recipe.analysis}</div>`;
+        accordionContents[4].innerHTML = `<div class="p-4">${recipe.addons}</div>`;
     }
 }
 
