@@ -630,6 +630,84 @@ function openMealFromUrl(mealName) {
             typeWriter(res, descEl);
         }
 
+        async function fetchRecipeDetails(mealName) {
+    const mealDesc = document.getElementById('mealDesc');
+    
+    // UI Feedback: Let the user know the chef is working
+    mealDesc.innerHTML = `<span class="typing">Chef Linguini is looking up the recipe for <b>${mealName}</b>...</span>`;
+    
+    // Reset all accordion content boxes to "Loading..."
+    const contents = document.querySelectorAll('.accordion-content');
+    contents.forEach(el => el.innerHTML = `<p class="p-4 animate-pulse">Fetching details...</p>`);
+
+    // The Prompt specifically for your Dashboard layout
+    const prompt = `Act as a Master Chef. I want to cook "${mealName}". 
+    Provide the details in this EXACT format:
+    
+    CHEF_NOTE: (A 2-sentence appetizing description)
+    INGREDIENTS: (List with bullet points)
+    NUTRITION_FACTS: (Calories, Protein, Carbs, Fat)
+    STEPS: (Numbered instructions)
+    ANALYSIS: (A brief health/nutritional breakdown)
+    ADD_ONS: (Serving suggestions)
+    
+    Use clear headers for each.`;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${firebaseConfig.apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            renderRecipeToUI(aiText);
+        }
+    } catch (error) {
+        console.error("Gemini API Error:", error);
+        mealDesc.innerText = "I had trouble finding that recipe. Please check your connection.";
+    }
+}
+
+function renderRecipeToUI(text) {
+    // This helper splits the AI text based on the headers we requested in the prompt
+    const parse = (header) => {
+        const regex = new RegExp(`${header}:([\\s\\S]*?)(?=[A-Z_]+:|$)`, 'i');
+        const match = text.match(regex);
+        return match ? match[1].trim() : "Details not found.";
+    };
+
+    // 1. Update Chef's Note
+    document.getElementById('mealDesc').innerText = parse("CHEF_NOTE");
+
+    // 2. Map the sections to your specific Accordion boxes
+    const sections = [
+        parse("INGREDIENTS"),
+        parse("NUTRITION_FACTS"),
+        parse("STEPS"),
+        parse("ANALYSIS"),
+        parse("ADD_ONS")
+    ];
+
+    const accordionContainers = document.querySelectorAll('.accordion-content');
+    
+    sections.forEach((content, index) => {
+        if (accordionContainers[index]) {
+            // Clean up markdown stars/dashes for cleaner HTML display
+            const formattedContent = content
+                .replace(/\*/g, '') // Remove markdown bold stars
+                .replace(/\n/g, '<br>'); // Convert newlines to breaks
+            
+            accordionContainers[index].innerHTML = `<div class="p-4 text-gray-700">${formattedContent}</div>`;
+        }
+    });
+}
+
         function toggleFavorite() {
             if (!currentUser || !currentMealName) return;
             const mealId = currentMealName.replace(/[.#$/[\]]/g, "_");
