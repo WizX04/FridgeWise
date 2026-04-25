@@ -1,34 +1,66 @@
 /**
- * FridgeWise Dashboard Logic
+ * FridgeWise - Dashboard Logic
+ * Handles: Firebase Auth, Ingredient List, AI Generation, and UI Swapping
  */
 
 let ingredients = [];
+let currentMeal = null;
 
-// --- Sidebar & UI Toggles ---
-const sidebar = document.getElementById('sidebar');
-const userSidebar = document.getElementById('userSidebar');
-const overlay = document.getElementById('sidebarOverlay');
+// --- 1. INITIALIZATION & UI SETUP ---
+document.addEventListener('DOMContentLoaded', () => {
+    initVideoResize();
+    setupSidebars();
+});
 
-document.getElementById('sidebarToggle').onclick = () => toggleSidebar(sidebar);
-document.getElementById('userMenuToggle').onclick = () => toggleSidebar(userSidebar);
-document.getElementById('sidebarClose').onclick = closeAllSidebars;
-document.getElementById('userSidebarClose').onclick = closeAllSidebars;
-overlay.onclick = closeAllSidebars;
+// Sidebar Toggle Logic
+function setupSidebars() {
+    const sidebar = document.getElementById('sidebar');
+    const userSidebar = document.getElementById('userSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const userMenuToggle = document.getElementById('userMenuToggle');
 
-function toggleSidebar(el) {
-    el.classList.toggle('-translate-x-full'); // Left sidebar
-    el.classList.toggle('translate-x-full');  // Right sidebar (if it's the right one)
-    overlay.classList.toggle('opacity-0');
-    overlay.classList.toggle('pointer-events-none');
+    const openSidebar = (el) => {
+        el.classList.remove('-translate-x-full', 'translate-x-full');
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+    };
+
+    const closeAll = () => {
+        sidebar.classList.add('-translate-x-full');
+        userSidebar.classList.add('translate-x-full');
+        overlay.classList.add('opacity-0', 'pointer-events-none');
+    };
+
+    sidebarToggle.onclick = () => openSidebar(sidebar);
+    userMenuToggle.onclick = () => openSidebar(userSidebar);
+    document.getElementById('sidebarClose').onclick = closeAll;
+    document.getElementById('userSidebarClose').onclick = closeAll;
+    overlay.onclick = closeAll;
 }
 
-function closeAllSidebars() {
-    sidebar.classList.add('-translate-x-full');
-    userSidebar.classList.add('translate-x-full');
-    overlay.classList.add('opacity-0', 'pointer-events-none');
+// Video Resize Logic (Matches your HTML IDs)
+function initVideoResize() {
+    const video = document.getElementById('initialVideo');
+    const slider = document.getElementById('videoSizeSlider');
+    const label = document.getElementById('sizeValue');
+
+    if (slider && video) {
+        slider.oninput = (e) => {
+            const val = e.target.value;
+            label.innerText = val + '%';
+            const scale = val / 100;
+            
+            if (window.innerWidth <= 768) {
+                video.style.transform = `scale(${scale})`;
+            } else {
+                // Maintains your specific desktop transform while scaling
+                video.style.transform = `translate(62px, -282px) scale(${2.73 * scale})`;
+            }
+        };
+    }
 }
 
-// --- Ingredient Management ---
+// --- 2. INGREDIENT MANAGEMENT ---
 function addIng() {
     const input = document.getElementById('ingInput');
     const val = input.value.trim();
@@ -53,69 +85,87 @@ function renderIngredients() {
     list.innerHTML = ingredients.map((ing, i) => `
         <li class="flex justify-between items-center bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in-down">
             <span class="font-medium text-green-800">${ing}</span>
-            <button onclick="removeIng(${i})" class="text-red-400 hover:text-red-600 font-bold">×</button>
+            <button onclick="removeIng(${i})" class="text-red-400 hover:text-red-600 px-2">×</button>
         </li>
     `).join('');
 }
 
-// --- Cooking Logic & Video Swapping ---
+// --- 3. AI GENERATION (Connecting to api/generate.js) ---
 document.getElementById('cookBtn').onclick = async function() {
-    if (ingredients.length === 0) {
-        alert("Please add some ingredients first!");
-        return;
-    }
+    if (ingredients.length === 0) return alert("Add ingredients first!");
 
-    // 1. Hide Initial State, Show Loading Video
+    // UI State: Show Loading Video
     document.getElementById('initialVideoContainer').classList.add('hidden');
     document.getElementById('loadingScreen').classList.remove('hidden');
-    document.getElementById('loadingVideo').play();
+    const loader = document.getElementById('loadingVideo');
+    loader.play();
+
+    const prompt = `Act as a professional chef. Based on these ingredients: ${ingredients.join(', ')}, suggest 3 creative meals. 
+    Return ONLY a JSON object: {"meals": [{"name": "...", "description": "...", "ingredients": [], "steps": [], "nutrition": "...", "analysis": "...", "addons": []}]}`;
 
     try {
-        // Replace this with your actual API call to Gemini or your backend
-        // const meals = await fetchMealsFromAI(ingredients);
-        
-        // Simulating a delay for the video to play
-        setTimeout(() => {
-            showResults();
-        }, 3000);
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
 
-    } catch (error) {
-        console.error("Cooking error:", error);
-        resetToInitial();
+        const data = await response.json();
+        const cleanJSON = data.text.replace(/```json|```/g, "").trim();
+        const result = JSON.parse(cleanJSON);
+
+        displayMeals(result.meals);
+    } catch (err) {
+        console.error("AI Error:", err);
+        alert("Chef Gemini is out of the kitchen. Try again!");
+        backToDashboard();
     }
 };
 
-function showResults() {
+function displayMeals(meals) {
     document.getElementById('loadingScreen').classList.add('hidden');
     document.getElementById('resultsScreen').classList.remove('hidden');
-    
-    // Example meal injection
+
     const container = document.getElementById('mealsContainer');
-    container.innerHTML = `
-        <div class="meal-card p-6 rounded-2xl shadow-sm border border-green-100 bg-white" onclick="viewMeal('Omelette')">
-            <h3 class="font-bold text-xl text-green-800">Garden Omelette</h3>
-            <p class="text-gray-500 text-sm italic">Uses: ${ingredients.join(', ')}</p>
+    container.innerHTML = meals.map((meal, i) => `
+        <div class="meal-card p-6 rounded-2xl shadow-sm border border-green-100 bg-white" 
+             onclick='openMealDetails(${JSON.stringify(meal).replace(/'/g, "&apos;")})'>
+            <h3 class="font-bold text-xl text-green-800 uppercase">${meal.name}</h3>
+            <p class="text-gray-500 text-sm italic mt-1">${meal.description}</p>
         </div>
-    `;
+    `).join('');
 }
 
-// --- Accordion Logic ---
-function toggleAccordion(btn, title) {
+// --- 4. MEAL DETAILS & ACCORDIONS ---
+function openMealDetails(meal) {
+    currentMeal = meal;
+    document.getElementById('mainDashboard').classList.add('hidden');
+    document.getElementById('mealOverview').classList.remove('hidden');
+    
+    document.getElementById('overviewMealName').innerText = meal.name;
+    document.getElementById('mealDesc').innerText = meal.description;
+
+    const contents = document.querySelectorAll('.accordion-content');
+    contents[0].innerHTML = `<ul class="ai-bullet-list">${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>`;
+    contents[1].innerHTML = `<p class="p-4">${meal.nutrition}</p>`;
+    contents[2].innerHTML = `<ol class="list-decimal p-4 ml-4">${meal.steps.map(s => `<li>${s}</li>`).join('')}</ol>`;
+    contents[3].innerHTML = `<p class="p-4">${meal.analysis}</p>`;
+    contents[4].innerHTML = `<ul class="ai-bullet-list">${meal.addons.map(a => `<li>${a}</li>`).join('')}</ul>`;
+}
+
+function toggleAccordion(btn) {
     const content = btn.nextElementSibling;
     const span = btn.querySelector('span');
-    
     content.classList.toggle('open');
-    span.textContent = content.classList.contains('open') ? '-' : '+';
+    span.innerText = content.classList.contains('open') ? '−' : '+';
 }
 
-// --- Navigation ---
 function backToDashboard() {
     document.getElementById('mealOverview').classList.add('hidden');
     document.getElementById('mainDashboard').classList.remove('hidden');
 }
 
-function viewMeal(name) {
-    document.getElementById('mainDashboard').classList.add('hidden');
-    document.getElementById('mealOverview').classList.remove('hidden');
-    document.getElementById('overviewMealName').textContent = name;
-}
+// --- 5. LOGOUT ---
+document.getElementById('logoutBtn').onclick = () => {
+    firebase.auth().signOut().then(() => window.location.href = "index.html");
+};
