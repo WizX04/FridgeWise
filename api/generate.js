@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { prompt } = req.body;
-  const API_KEY = process.env.GOOGLE_AI_API_KEY;
+ const API_KEY = process.env.GEMINI_API_KEY;
 
   if (!API_KEY) return res.status(500).json({ error: 'API key missing in Vercel' });
   if (!prompt) return res.status(400).json({ error: 'No ingredients provided' });
