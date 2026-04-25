@@ -754,6 +754,33 @@
             const urlParams = new URLSearchParams(window.location.search);
             const mealToOpen = urlParams.get('open');
             if (mealToOpen) openMealOverview(decodeURIComponent(mealToOpen));
+
+            // 1. Add the Event Listener for the Start Cooking button
+        document.getElementById('cookBtn').addEventListener('click', async () => {
+            if (ingredients.length === 0) {
+                alert("Please add at least one ingredient!");
+                return;
+            }
+        
+            // 2. Hide Initial Video and Show Loading Video
+            initialVideoContainer.classList.add('hidden');
+            loadingScreenDiv.classList.remove('hidden');
+            loadingVideo.play();
+        
+            try {
+                // 3. Call your AI/Recipe function (Assuming you have one named getRecipes)
+                // If you haven't written the fetch logic yet, this is where it goes
+                await getRecipes(ingredients); 
+        
+            } catch (error) {
+                console.error("Cooking error:", error);
+                alert("Something went wrong with the chef!");
+            } finally {
+                // 4. Hide Loading and show Results
+                loadingScreenDiv.classList.add('hidden');
+                resultsScreenDiv.classList.remove('hidden');
+            }
+        });
         };
     </script>
 </body>
