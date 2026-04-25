@@ -538,46 +538,54 @@
             }
         }
 
-// 1. Global state
-let activeUser = null;
+let ingredients = [];
+let currentMealName = "";
+let currentUser = null;
+let activeUser = null; // Add this line
+let isAuthReady = false; // Add this to track if Firebase is "awake"
 
         auth.onAuthStateChanged((user) => {
-            if (user) {
-                activeUser = user;
-                currentUser = user;
-                document.body.classList.remove('loading');
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const mealToOpen = urlParams.get('open');
-                if (mealToOpen) {
-                    handleMealSelection(decodeURIComponent(mealToOpen));
-                }
-                
-                document.getElementById('leftSidebarContainer')?.classList.remove('hidden');
-                document.getElementById('logoutBtn')?.classList.remove('hidden');
-            } else {
-                if (!window.location.pathname.includes("index.html")) {
-                    window.location.href = "index.html";
-                }
-            }
-        });
-
-        // 3. PUT THE HANDLE FUNCTION HERE (Between Auth and openMeal)
-        async function handleMealSelection(mealName) {
-            if (!activeUser) {
-                alert("Session expired. Please login again.");
-                window.location.href = "index.html";
-                return;
-            }
-
-            const newUrl = `${window.location.pathname}?open=${encodeURIComponent(mealName)}`;
-            window.history.pushState({ path: newUrl }, '', newUrl);
-
-            const header = document.getElementById('overviewMealName'); // Use this specific ID from your HTML
-            if(header) header.innerText = mealName;
-
-            await openMealFromUrl(mealName);
+    isAuthReady = true; // Firebase is now finished checking the session
+    
+    if (user) {
+        activeUser = user;
+        currentUser = user;
+        document.body.classList.remove('loading');
+        
+        // Handle deep links (like when clicking back/forward in browser)
+        const urlParams = new URLSearchParams(window.location.search);
+        const mealToOpen = urlParams.get('open');
+        if (mealToOpen) {
+            openMealFromUrl(decodeURIComponent(mealToOpen));
         }
+    } else {
+        // Only redirect if we aren't already on the login page
+        if (!window.location.pathname.includes("index.html")) {
+            window.location.href = "index.html";
+        }
+    }
+});
+      async function handleMealSelection(mealName) {
+    // If Firebase isn't ready yet, wait a tiny bit and try again
+    if (!isAuthReady) {
+        setTimeout(() => handleMealSelection(mealName), 500);
+        return;
+    }
+
+    if (!activeUser) {
+        alert("Please login first!");
+        window.location.href = "index.html";
+        return;
+    }
+
+    // This updates the URL so clicking "Back" works, 
+    // but DOES NOT refresh the page (keeping you logged in)
+    const newUrl = `${window.location.pathname}?open=${encodeURIComponent(mealName)}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+
+    // Call your display logic
+    openMealFromUrl(mealName);
+}
 
         // 4. YOUR EXISTING OPEN MEAL FUNCTION
         function openMealFromUrl(mealName) {
