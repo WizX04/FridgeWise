@@ -487,10 +487,9 @@
     </div>
 
     <script>
-       // --- FIREBASE CONFIG ---
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
-            // We will inject these via Vercel later
-            apiKey: window.ENV_FIREBASE_KEY || "", 
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
             authDomain: "fridgewise-37166.firebaseapp.com",
             databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
             projectId: "fridgewise-37166",
@@ -499,9 +498,11 @@
             appId: "1:367251387454:web:ed536522f271197b3d0d6f",
             measurementId: "G-122HEMEYBR"
         };
-        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
         let ingredients = [];
-        // We remove API_KEY entirely because we will call a local /api route instead
         let currentMealName = "";
         let currentUser = null;
 
@@ -651,12 +652,12 @@
 
         async function callAI(text) {
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`, {
+                const res = await fetch('/api/generate', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                    body: JSON.stringify({ prompt: text })
                 });
                 const data = await res.json();
-                return data.candidates[0].content.parts[0].text;
+                return data.response;
             } catch { return "Error loading content."; }
         }
 
@@ -755,13 +756,5 @@
             if (mealToOpen) openMealOverview(decodeURIComponent(mealToOpen));
         };
     </script>
-    <script>
-    // Initialize Firebase before the external logic loads
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const database = firebase.database();
-</script>
-
-<script src="dashboard-logic.js"></script>
 </body>
 </html>

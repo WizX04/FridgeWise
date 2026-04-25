@@ -1,11 +1,19 @@
 {
   "name": "fridgewise",
   "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@google/generative-ai": "0.11.0"
+  "description": "FridgeWise - Digital Kitchen Application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "vercel dev"
   },
+  "keywords": ["fridgewise", "kitchen", "recipes"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {},
   "engines": {
-    "node": "20.x"
+    "node": ">=14.0.0"
   }
 }
