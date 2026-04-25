@@ -539,35 +539,41 @@
         }
 
 auth.onAuthStateChanged((user) => {
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const mealToOpen = urlParams.get('open');
+
+
     if (!user) {
+
+        // If truly no user, redirect to login
         window.location.href = "index.html";
         return;
     }
 
-    // 1. SET GLOBAL USER FIRST
-    currentUser = user; 
-
-    // 2. REVEAL UI
+    // USER IS LOGGED IN - Reveal the page now
     document.body.classList.remove('loading');
-    document.getElementById('leftSidebarContainer')?.classList.remove('hidden');
-    document.getElementById('logoutBtn')?.classList.remove('hidden');
+    currentUser = user;
 
-    // 3. LOAD DATA (History/Favorites)
-    // IMPORTANT: Make sure these functions check for 'user' internally
-    loadUserHistory(); 
-    loadFavorites();
+    // ... rest of your profile UI logic ...
 
-    // 4. HANDLE URL PARAMS (RUN ONLY ONCE)
-    const urlParams = new URLSearchParams(window.location.search);
-    const mealToOpen = urlParams.get('open');
+
 
     if (mealToOpen) {
+
         openMealFromUrl(decodeURIComponent(mealToOpen));
-        
-        // OPTIONAL: Clear the URL param after opening so it doesn't 
-        // re-trigger on every small state change
-        window.history.replaceState({}, document.title, window.location.pathname);
+
     }
+
+    
+
+    // Ensure sidebar elements are visible
+
+    document.getElementById('leftSidebarContainer').classList.remove('hidden');
+
+    document.getElementById('logoutBtn').classList.remove('hidden');
+
 });
         
 function openMealFromUrl(mealName) {
