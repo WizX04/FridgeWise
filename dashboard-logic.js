@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSidebars();
 });
 
-// Sidebar Toggle Logic
 function setupSidebars() {
     const sidebar = document.getElementById('sidebar');
     const userSidebar = document.getElementById('userSidebar');
@@ -31,14 +30,13 @@ function setupSidebars() {
         overlay.classList.add('opacity-0', 'pointer-events-none');
     };
 
-    sidebarToggle.onclick = () => openSidebar(sidebar);
-    userMenuToggle.onclick = () => openSidebar(userSidebar);
+    if(sidebarToggle) sidebarToggle.onclick = () => openSidebar(sidebar);
+    if(userMenuToggle) userMenuToggle.onclick = () => openSidebar(userSidebar);
     document.getElementById('sidebarClose').onclick = closeAll;
     document.getElementById('userSidebarClose').onclick = closeAll;
     overlay.onclick = closeAll;
 }
 
-// Video Resize Logic (Matches your HTML IDs)
 function initVideoResize() {
     const video = document.getElementById('initialVideo');
     const slider = document.getElementById('videoSizeSlider');
@@ -53,7 +51,6 @@ function initVideoResize() {
             if (window.innerWidth <= 768) {
                 video.style.transform = `scale(${scale})`;
             } else {
-                // Maintains your specific desktop transform while scaling
                 video.style.transform = `translate(62px, -282px) scale(${2.73 * scale})`;
             }
         };
@@ -90,15 +87,15 @@ function renderIngredients() {
     `).join('');
 }
 
-// --- 3. AI GENERATION (Connecting to api/generate.js) ---
+// --- 3. AI GENERATION ---
 document.getElementById('cookBtn').onclick = async function() {
     if (ingredients.length === 0) return alert("Add ingredients first!");
 
-    // UI State: Show Loading Video
+    // UI State: Show Loading
     document.getElementById('initialVideoContainer').classList.add('hidden');
     document.getElementById('loadingScreen').classList.remove('hidden');
     const loader = document.getElementById('loadingVideo');
-    loader.play();
+    if(loader) loader.play();
 
     const prompt = `Act as a professional chef. Based on these ingredients: ${ingredients.join(', ')}, suggest 3 creative meals. 
     Return ONLY a JSON object: {"meals": [{"name": "...", "description": "...", "ingredients": [], "steps": [], "nutrition": "...", "analysis": "...", "addons": []}]}`;
@@ -111,16 +108,27 @@ document.getElementById('cookBtn').onclick = async function() {
         });
 
         const data = await response.json();
-        const cleanJSON = data.text.replace(/```json|```/g, "").trim();
-        const result = JSON.parse(cleanJSON);
 
-        displayMeals(result.meals);
+        // SAFETY CHECK: Ensure data.text exists before calling .replace()
+        if (data.text) {
+            const cleanJSON = data.text.replace(/```json|```/g, "").trim();
+            const result = JSON.parse(cleanJSON);
+            displayMeals(result.meals);
+        } else {
+            throw new Error("AI returned no content. Check your API key and package.json.");
+        }
+
     } catch (err) {
         console.error("AI Error:", err);
-        alert("Chef Gemini is out of the kitchen. Try again!");
-        backToDashboard();
+        alert("Chef Gemini is out of the kitchen. Ensure you added package.json to your root folder!");
+        resetUI();
     }
 };
+
+function resetUI() {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('initialVideoContainer').classList.remove('hidden');
+}
 
 function displayMeals(meals) {
     document.getElementById('loadingScreen').classList.add('hidden');
@@ -128,7 +136,7 @@ function displayMeals(meals) {
 
     const container = document.getElementById('mealsContainer');
     container.innerHTML = meals.map((meal, i) => `
-        <div class="meal-card p-6 rounded-2xl shadow-sm border border-green-100 bg-white" 
+        <div class="meal-card p-6 rounded-2xl shadow-sm border border-green-100 bg-white cursor-pointer hover:bg-green-50 transition-all" 
              onclick='openMealDetails(${JSON.stringify(meal).replace(/'/g, "&apos;")})'>
             <h3 class="font-bold text-xl text-green-800 uppercase">${meal.name}</h3>
             <p class="text-gray-500 text-sm italic mt-1">${meal.description}</p>
@@ -146,18 +154,20 @@ function openMealDetails(meal) {
     document.getElementById('mealDesc').innerText = meal.description;
 
     const contents = document.querySelectorAll('.accordion-content');
-    contents[0].innerHTML = `<ul class="ai-bullet-list">${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>`;
-    contents[1].innerHTML = `<p class="p-4">${meal.nutrition}</p>`;
-    contents[2].innerHTML = `<ol class="list-decimal p-4 ml-4">${meal.steps.map(s => `<li>${s}</li>`).join('')}</ol>`;
-    contents[3].innerHTML = `<p class="p-4">${meal.analysis}</p>`;
-    contents[4].innerHTML = `<ul class="ai-bullet-list">${meal.addons.map(a => `<li>${a}</li>`).join('')}</ul>`;
+    if (contents.length >= 5) {
+        contents[0].innerHTML = `<ul class="ai-bullet-list">${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>`;
+        contents[1].innerHTML = `<p class="p-4 text-gray-700 font-medium">${meal.nutrition}</p>`;
+        contents[2].innerHTML = `<ol class="list-decimal p-4 ml-4 space-y-2">${meal.steps.map(s => `<li>${s}</li>`).join('')}</ol>`;
+        contents[3].innerHTML = `<p class="p-4 text-gray-700">${meal.analysis}</p>`;
+        contents[4].innerHTML = `<ul class="ai-bullet-list">${meal.addons.map(a => `<li>${a}</li>`).join('')}</ul>`;
+    }
 }
 
 function toggleAccordion(btn) {
     const content = btn.nextElementSibling;
     const span = btn.querySelector('span');
     content.classList.toggle('open');
-    span.innerText = content.classList.contains('open') ? '−' : '+';
+    if (span) span.innerText = content.classList.contains('open') ? '−' : '+';
 }
 
 function backToDashboard() {
@@ -166,6 +176,9 @@ function backToDashboard() {
 }
 
 // --- 5. LOGOUT ---
-document.getElementById('logoutBtn').onclick = () => {
-    firebase.auth().signOut().then(() => window.location.href = "index.html");
-};
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.onclick = () => {
+        firebase.auth().signOut().then(() => window.location.href = "index.html");
+    };
+}
