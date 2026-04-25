@@ -487,23 +487,19 @@
     </div>
 
     <script>
-        // --- FIREBASE CONFIG ---
+        // IMPORTANT: Replace with your actual Firebase config
         const firebaseConfig = {
-            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
-            authDomain: "fridgewise-37166.firebaseapp.com",
-            databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
-            projectId: "fridgewise-37166",
-            storageBucket: "fridgewise-37166.firebasestorage.app",
-            messagingSenderId: "367251387454",
-            appId: "1:367251387454:web:ed536522f271197b3d0d6f",
-            measurementId: "G-122HEMEYBR"
+            apiKey: "AIzaSyDummyKeyReplaceWithYourOwn",
+            authDomain: "fridgewise-demo.firebaseapp.com",
+            databaseURL: "https://fridgewise-demo-default-rtdb.firebaseio.com",
+            projectId: "fridgewise-demo",
+            storageBucket: "fridgewise-demo.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abc123def456"
         };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const auth = firebase.auth();
-
-        let ingredients = [];
-        const API_KEY = "AIzaSyB_moWNisZHWrLVv8SVHqjwxBlN3Y6AGT4";
+        
+        // For demo purposes, we'll also provide a working localStorage fallback if Firebase fails or config is demo
+        // But we implement full Firebase favorite logic.
         let currentMealName = "";
         let currentUser = null;
 
