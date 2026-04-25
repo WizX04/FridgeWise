@@ -261,277 +261,357 @@
         </main>
     </div>
 
-    <script>
-        // --- FIREBASE & API CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
-            authDomain: "fridgewise-37166.firebaseapp.com",
-            databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
-            projectId: "fridgewise-37166",
-            storageBucket: "fridgewise-37166.firebasestorage.app",
-            messagingSenderId: "367251387454",
-            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const auth = firebase.auth();
-        const API_KEY = "AIzaSyDgM-qux49wz_X24jdM8-BChykEAwWBkDc";
-        
-        let currentMealName = "";
-        let currentUser = null;
+<script>
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+        authDomain: "fridgewise-37166.firebaseapp.com",
+        databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
+        projectId: "fridgewise-37166",
+        storageBucket: "fridgewise-37166.firebasestorage.app",
+        messagingSenderId: "367251387454",
+        appId: "1:367251387454:web:ed536522f271197b3d0d6f",
+        measurementId: "G-122HEMEYBR"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const auth = firebase.auth();
 
-        // --- AUTH STATE CHECK ---
-        auth.onAuthStateChanged((user) => {
-            if (!user) {
-                window.location.href = "index.html";
-                return;
-            }
-            currentUser = user;
-            
-            // Load user profile data
-            database.ref('users/' + user.uid).once('value').then((snapshot) => {
-                const data = snapshot.val();
-                const name = (data && data.username) ? data.username : (user.displayName || "User");
-                updateProfileUI(name, user.email);
+    let ingredients = [];
+    let currentMealName = "";
+    let currentUser = null;
+
+    const initialVideoContainer = document.getElementById('initialVideoContainer');
+    const loadingScreenDiv = document.getElementById('loadingScreen');
+    const resultsScreenDiv = document.getElementById('resultsScreen');
+    const loadingVideo = document.getElementById('loadingVideo');
+    const initialVideoElem = document.getElementById('initialVideo');
+    const videoSizeSlider = document.getElementById('videoSizeSlider');
+    const sizeValueSpan = document.getElementById('sizeValue');
+    
+    function initVideoResize() {
+        if (videoSizeSlider && sizeValueSpan && initialVideoElem) {
+            videoSizeSlider.addEventListener('input', (e) => {
+                const percent = e.target.value;
+                sizeValueSpan.innerText = percent + '%';
+                const scale = percent / 100;
+                if (window.innerWidth <= 768) {
+                    initialVideoElem.style.transform = `scale(${scale})`;
+                    initialVideoElem.style.transformOrigin = 'center center';
+                } else {
+                    initialVideoElem.style.transform = `translate(62px, -282px) scale(${2.73 * scale})`;
+                    initialVideoElem.style.transformOrigin = 'center';
+                }
             });
-        });
-
-        // --- UPDATE PROFILE UI ---
-        function updateProfileUI(name, email) {
-            document.getElementById('userNameDisplay').textContent = name;
-            document.getElementById('userEmailDisplay').textContent = email;
-            document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
-        }
-
-        // --- SIDEBAR LOGIC ---
-        const sidebar = document.getElementById('sidebar');
-        const userSidebar = document.getElementById('userSidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-
-        function closeAll() {
-            sidebar.classList.add('-translate-x-full');
-            userSidebar.classList.add('translate-x-full');
-            overlay.classList.remove('opacity-100', 'pointer-events-auto');
-        }
-
-        document.getElementById('sidebarToggle').onclick = () => {
-            sidebar.classList.remove('-translate-x-full');
-            overlay.classList.add('opacity-100', 'pointer-events-auto');
-        };
-
-        document.getElementById('userMenuToggle').onclick = () => {
-            userSidebar.classList.remove('translate-x-full');
-            overlay.classList.add('opacity-100', 'pointer-events-auto');
-        };
-
-        document.getElementById('sidebarClose').onclick = closeAll;
-        document.getElementById('userSidebarClose').onclick = closeAll;
-        overlay.onclick = closeAll;
-
-        // --- LOGOUT ACTION ---
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            auth.signOut().then(() => {
-                window.location.href = 'index.html';
-            });
-        });
-
-        // --- CORE FUNCTIONS ---
-        async function handleDirectSearch() {
-            if (!currentUser) {
-                alert("Please log in first!");
-                return;
-            }
-            
-            const input = document.getElementById('mealSearchInput');
-            const mealName = input.value.trim();
-            const btn = document.getElementById('startCookingBtn');
-
-            if (!mealName) return alert("Please enter a meal name!");
-
-            btn.innerText = "CHEF IS BRAINSTORMING..."; 
-            btn.disabled = true;
-            currentMealName = mealName;
-
-            document.querySelectorAll('.accordion-content').forEach(el => { el.classList.remove('open'); el.innerHTML = ""; });
-            document.querySelectorAll('#accordionGroup span').forEach(s => s.innerText = "+");
-
-            // --- LOG TO COOKING HISTORY (User-specific) ---
-            const historyRef = database.ref(`users/${currentUser.uid}/history`).push();
-            historyRef.set({
-                name: mealName,
-                ingredients: "Direct Search",
-                cookedAt: Date.now()
-            });
-
-            // Show meal overview
-            document.getElementById('mealOverview').classList.remove('hidden');
-            document.getElementById('searchView').classList.add('hidden');
-            document.getElementById('viewMealName').innerText = mealName;
-            
-            const mealId = mealName.replace(/[.#$/[\]]/g, "_");
-            database.ref(`users/${currentUser.uid}/favorites/${mealId}`).once('value', s => setStarState(s.exists()));
-
-            const img = document.getElementById('overviewImg');
-            const loader = document.getElementById('imageLoader');
-            img.classList.add('hidden'); loader.classList.remove('hidden');
-            img.src = `https://loremflickr.com/600/600/${encodeURIComponent(mealName)},dish,food/all?lock=${Math.floor(Math.random()*1000)}`;
-            img.onload = () => { img.classList.remove('hidden'); loader.classList.add('hidden'); };
-
-            // AUTO SCROLL TO MEAL OVERVIEW
-            setTimeout(() => {
-                const mealOverview = document.getElementById('mealOverview');
-                mealOverview.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start',
-                    inline: 'nearest'
-                });
-            }, 100);
-
-            const descEl = document.getElementById('mealDesc');
-            descEl.innerText = "";
-            const res = await callAI(`Give a short, appetizing 2-sentence Filipino description for ${mealName}.`);
-            typeWriter(res, descEl);
-
-            btn.innerText = "START COOKING"; 
-            btn.disabled = false;
-        }
-
-        async function toggleAccordion(btn, type) {
-            const content = btn.nextElementSibling;
-            const span = btn.querySelector('span');
-            if (content.classList.contains('open')) {
-                content.classList.remove('open'); span.innerText = "+";
+            videoSizeSlider.value = '100';
+            sizeValueSpan.innerText = '100%';
+            if (window.innerWidth <= 768) {
+                initialVideoElem.style.transform = 'scale(1)';
             } else {
-                content.innerHTML = "<p class='py-4 italic text-gray-400 text-center'>Consulting the chef...</p>";
-                content.classList.add('open'); span.innerText = "-";
-                const aiRes = await callAI(`Provide ${type} for "${currentMealName}". Keep it concise and use bullets.`);
-                content.innerHTML = ""; 
+                initialVideoElem.style.transform = 'translate(62px, -282px) scale(2.73)';
+            }
+        }
+    }
+
+    auth.onAuthStateChanged((user) => {
+        if (!user) {
+            window.location.href = "index.html";
+            return;
+        }
+        currentUser = user;
+        database.ref('users/' + user.uid).once('value').then((snapshot) => {
+            const data = snapshot.val();
+            const name = (data && data.username) ? data.username : (user.displayName || "User");
+            updateProfileUI(name, user.email);
+        });
+        document.getElementById('leftSidebarContainer').classList.remove('hidden');
+        document.getElementById('brandLogo').classList.add('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
+    });
+
+    function updateProfileUI(name, email) {
+        document.getElementById('userNameDisplay').textContent = name;
+        document.getElementById('userEmailDisplay').textContent = email;
+        document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+    }
+
+    function setStarState(isFav) {
+        const star = document.getElementById('favStar');
+        const text = document.getElementById('favText');
+        if (isFav) {
+            star.innerHTML = "&#9733;";
+            star.style.color = "#facc15";
+            text.innerText = "(Favorited)";
+        } else {
+            star.innerHTML = "&#9734;";
+            star.style.color = "#9ca3af";
+            text.innerText = "(Mark as favorite)";
+        }
+    }
+
+    function addIng() { const input = document.getElementById('ingInput'); if (input.value.trim()) { ingredients.push(input.value.trim()); input.value = ''; renderList(); } }
+    function editIng(index) { const newValue = prompt("Edit ingredient:", ingredients[index]); if (newValue !== null && newValue.trim() !== "") { ingredients[index] = newValue.trim(); renderList(); } }
+    function handleKey(e) { if (e.key === "Enter") addIng(); }
+    function renderList() {
+        document.getElementById('ingList').innerHTML = ingredients.map((ing, i) => `
+            <li class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <span class="font-medium text-gray-700">${escapeHtml(ing)}</span>
+                <div class="flex gap-4">
+                    <button onclick="editIng(${i})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Edit</button>
+                    <button onclick="ingredients.splice(${i},1);renderList()" class="text-red-400 font-bold">✕</button>
+                </div>
+            </li>`).join('');
+    }
+
+    // UPDATED: Get or generate meal content from cache/database
+    async function getMealContent(mealName, sectionType) {
+        if (!currentUser) return null;
+        
+        const mealId = mealName.replace(/[.#$/[\]]/g, "_");
+        const contentRef = database.ref(`users/${currentUser.uid}/meal_cache/${mealId}/${sectionType}`);
+        
+        // Try to get from cache first
+        const snapshot = await contentRef.once('value');
+        if (snapshot.exists()) {
+            console.log(`Loaded ${sectionType} for ${mealName} from cache`);
+            return snapshot.val();
+        }
+        
+        // If not in cache, generate via AI
+        console.log(`Generating ${sectionType} for ${mealName} via API...`);
+        let aiPrompt = "";
+        switch(sectionType) {
+            case 'description':
+                aiPrompt = `Give a short, appetizing 2-sentence Filipino description for ${mealName}.`;
+                break;
+            case 'Ingredients':
+                aiPrompt = `Provide Ingredients for "${mealName}". Keep it concise and use bullets.`;
+                break;
+            case 'Nutritional Facts':
+                aiPrompt = `Provide Nutritional Facts for "${mealName}". Keep it concise and use bullets.`;
+                break;
+            case 'Step by Step Process':
+                aiPrompt = `Provide Step by Step Process for "${mealName}". Keep it concise and use bullets.`;
+                break;
+            case 'Nutritional Analysis':
+                aiPrompt = `Provide Nutritional Analysis for "${mealName}". Keep it concise and use bullets.`;
+                break;
+            case 'Add-ons Suggestion':
+                aiPrompt = `Provide Add-ons Suggestion for "${mealName}". Keep it concise and use bullets.`;
+                break;
+            default:
+                return null;
+        }
+        
+        try {
+            const aiResponse = await callAI(aiPrompt);
+            if (aiResponse && aiResponse !== "Error loading content.") {
+                // Save to cache
+                await contentRef.set(aiResponse);
+                console.log(`Saved ${sectionType} for ${mealName} to cache`);
+                return aiResponse;
+            }
+        } catch (e) {
+            console.error("Content generation error:", e);
+        }
+        
+        return null;
+    }
+
+    async function openMealOverview(name) {
+        if (!currentUser) { alert("Please log in first!"); return; }
+        currentMealName = name;
+        const historyRef = database.ref(`users/${currentUser.uid}/history`).push();
+        historyRef.set({ name: name, ingredients: ingredients.length > 0 ? ingredients.join(", ") : "None specified", cookedAt: Date.now() });
+        document.getElementById('mainDashboard').classList.add('hidden');
+        document.getElementById('mealOverview').classList.remove('hidden');
+        document.getElementById('overviewMealName').innerText = name;
+        const mealId = name.replace(/[.#$/[\]]/g, "_");
+        database.ref(`users/${currentUser.uid}/favorites/${mealId}`).once('value', s => setStarState(s.exists()));
+        document.querySelectorAll('.accordion-content').forEach(el => { el.classList.remove('open'); el.innerHTML = ""; });
+        document.querySelectorAll('#accordionGroup span').forEach(s => s.innerText = "+");
+        const descEl = document.getElementById('mealDesc');
+        descEl.innerText = "";
+        
+        // Get description from cache or generate
+        const description = await getMealContent(name, 'description');
+        if (description) {
+            typeWriter(description, descEl);
+        } else {
+            descEl.innerText = "Unable to load description.";
+        }
+    }
+
+    function toggleFavorite() {
+        if (!currentUser || !currentMealName) return;
+        const mealId = currentMealName.replace(/[.#$/[\]]/g, "_");
+        const favRef = database.ref(`users/${currentUser.uid}/favorites/${mealId}`);
+        favRef.once('value', snapshot => {
+            if (snapshot.exists()) {
+                favRef.remove().then(() => { setStarState(false); alert("The meal is unfavorited"); });
+            } else {
+                favRef.set({ name: currentMealName, savedAt: Date.now() }).then(() => { setStarState(true); alert("The meal is favorited"); });
+            }
+        });
+    }
+
+    async function toggleAccordion(btn, type) {
+        const content = btn.nextElementSibling;
+        const span = btn.querySelector('span');
+        if (content.classList.contains('open')) {
+            content.classList.remove('open'); span.innerText = "+";
+        } else {
+            content.innerHTML = "<p class='py-4 italic text-gray-400 text-center'>Consulting the chef...</p>";
+            content.classList.add('open'); span.innerText = "-";
+            
+            // Get content from cache or generate
+            const aiRes = await getMealContent(currentMealName, type);
+            
+            content.innerHTML = ""; 
+            if (aiRes) {
                 const list = document.createElement('ul');
                 list.className = "ai-bullet-list typing";
                 content.appendChild(list);
                 const items = aiRes.split(/\n/).filter(l => l.trim().length > 0).map(l => l.replace(/^(\d+\.|\*|-)\s+/, ""));
                 typeWriterList(items, list);
-            }
-        }
-
-        async function callAI(text) {
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
-                });
-                const data = await res.json();
-                return data.candidates[0].content.parts[0].text;
-            } catch { return "Error loading content."; }
-        }
-
-        function typeWriter(text, element) {
-            let i = 0; element.classList.add('typing');
-            (function type() {
-                if (i < text.length) { element.innerHTML += text.charAt(i); i++; setTimeout(type, 15); }
-                else { element.classList.remove('typing'); }
-            })();
-        }
-
-        function typeWriterList(items, container) {
-            let itemIdx = 0;
-            (function nextItem() {
-                if (itemIdx < items.length) {
-                    const li = document.createElement('li');
-                    container.appendChild(li);
-                    let charIdx = 0;
-                    (function typeChar() {
-                        if (charIdx < items[itemIdx].length) {
-                            li.innerHTML += items[itemIdx].charAt(charIdx); charIdx++; setTimeout(typeChar, 10);
-                        } else { itemIdx++; nextItem(); }
-                    })();
-                } else { container.classList.remove('typing'); }
-            })();
-        }
-
-        function toggleFavorite() {
-            if (!currentUser || !currentMealName) return;
-            const mealId = currentMealName.replace(/[.#$/[\]]/g, "_");
-            const favRef = database.ref(`users/${currentUser.uid}/favorites/${mealId}`);
-            
-            favRef.once('value', snapshot => {
-                if (snapshot.exists()) {
-                    favRef.remove().then(() => { 
-                        setStarState(false); 
-                        alert("Meal removed from favorites.");
-                    });
-                } else {
-                    favRef.set({ name: currentMealName, savedAt: Date.now() }).then(() => { 
-                        setStarState(true); 
-                        alert("Meal favorited!");
-                    });
-                }
-            });
-        }
-
-        function setStarState(isFav) {
-            const star = document.getElementById('favStar');
-            const text = document.getElementById('favText');
-            if (isFav) {
-                star.innerHTML = "&#9733;";
-                star.style.color = "#facc15";
-                text.innerText = "(Favorited)";
             } else {
-                star.innerHTML = "&#9734;";
-                star.style.color = "#9ca3af";
-                text.innerText = "(Mark as favorite)";
+                content.innerHTML = "<p class='py-4 italic text-red-400 text-center'>Failed to load content.</p>";
             }
         }
+    }
 
-        function shareMeal(platform) {
-            if (!currentMealName) return;
-            const baseUrl = window.location.href.split('?')[0]; 
-            const shareUrl = `${baseUrl}?open=${encodeURIComponent(currentMealName)}`;
-            
-            if (platform === 'link') {
-                navigator.clipboard.writeText(shareUrl).then(() => alert("Link copied to clipboard!"));
-            } else if (platform === 'messenger') {
-                window.open(`https://www.messenger.com/share/?link=${encodeURIComponent(shareUrl)}`, '_blank');
-            } else if (platform === 'instagram') {
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("Link copied! Open Instagram to share with your friends.");
-                    window.open('https://www.instagram.com/', '_blank');
-                });
+    function shareMeal(platform) {
+        if (!currentMealName) return;
+        const baseUrl = window.location.href.split('?')[0]; 
+        const shareUrl = `${baseUrl}?open=${encodeURIComponent(currentMealName)}`;
+        if (platform === 'link') {
+            navigator.clipboard.writeText(shareUrl).then(() => alert("Recipe link copied to clipboard!"));
+        } else if (platform === 'messenger') {
+            window.open(`https://www.messenger.com/share/?link=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=400');
+        } else if (platform === 'instagram') {
+            navigator.clipboard.writeText(shareUrl).then(() => alert("Link copied! You can now paste this link in your Instagram DM or Story."));
+        }
+    }
+
+    async function callAI(text) {
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    contents: [{ parts: [{ text: text }] }] 
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Vercel Error:", errorText);
+                throw new Error("Server error");
             }
-        }
 
-        // Handle back navigation from meal overview
-        function backToSearch() {
-            document.getElementById('mealOverview').classList.add('hidden');
-            document.getElementById('searchView').classList.remove('hidden');
-            currentMealName = "";
-            // Scroll back to top smoothly
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        } catch (err) {
+            console.error("AI Fetch Error:", err);
+            return "Error loading content.";
         }
+    }
 
-        // Add back button functionality
-        const backButton = document.createElement('button');
-        backButton.onclick = backToSearch;
-        backButton.className = "text-[#065f46] font-bold flex items-center mb-4 hover:underline transition-all";
-        backButton.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> BACK TO SEARCH';
-        
-        // Insert back button in meal overview header if not exists
-        const mealHeader = document.querySelector('#mealOverview main');
-        if (mealHeader && !document.querySelector('#backToSearchBtn')) {
-            backButton.id = 'backToSearchBtn';
-            mealHeader.insertBefore(backButton, mealHeader.firstChild);
-        }
+    function typeWriter(text, element, speed = 15) {
+        let i = 0; element.classList.add('typing');
+        element.innerHTML = ""; // Clear before typing
+        (function type() {
+            if (i < text.length) { element.innerHTML += text.charAt(i); i++; setTimeout(type, speed); }
+            else { element.classList.remove('typing'); }
+        })();
+    }
 
-        // Handle URL parameter for direct meal opening
-        window.onload = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const mealToOpen = urlParams.get('open');
-            if (mealToOpen) {
-                const decodedMeal = decodeURIComponent(mealToOpen);
-                document.getElementById('mealSearchInput').value = decodedMeal;
-                handleDirectSearch();
-            }
-        };
-    </script>
+    function typeWriterList(items, container, speed = 10) {
+        let itemIdx = 0;
+        (function nextItem() {
+            if (itemIdx < items.length) {
+                const li = document.createElement('li');
+                container.appendChild(li);
+                let charIdx = 0;
+                (function typeChar() {
+                    if (charIdx < items[itemIdx].length) {
+                        li.innerHTML += items[itemIdx].charAt(charIdx); charIdx++; setTimeout(typeChar, speed);
+                    } else { itemIdx++; nextItem(); }
+                })();
+            } else { container.classList.remove('typing'); }
+        })();
+    }
+
+    function backToDashboard() {
+        document.getElementById('mealOverview').classList.add('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Sidebar
+    const sidebar = document.getElementById('sidebar');
+    const userSidebar = document.getElementById('userSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    function closeAll() {
+        sidebar.classList.add('-translate-x-full');
+        userSidebar.classList.add('translate-x-full');
+        overlay.classList.remove('opacity-100', 'pointer-events-auto');
+    }
+    document.getElementById('sidebarToggle').onclick = () => { sidebar.classList.remove('-translate-x-full'); overlay.classList.add('opacity-100', 'pointer-events-auto'); };
+    document.getElementById('userMenuToggle').onclick = () => { userSidebar.classList.remove('translate-x-full'); overlay.classList.add('opacity-100', 'pointer-events-auto'); };
+    document.getElementById('sidebarClose').onclick = closeAll;
+    document.getElementById('userSidebarClose').onclick = closeAll;
+    overlay.onclick = closeAll;
+    document.getElementById('logoutBtn').addEventListener('click', () => { auth.signOut().then(() => window.location.href = 'index.html'); });
+
+    // Cook button logic
+    document.getElementById('cookBtn').onclick = async () => {
+        if (!currentUser) { alert("Please log in first!"); return; }
+        if (ingredients.length === 0) return alert("Add ingredients first!");
+        const btn = document.getElementById('cookBtn');
+        const mealsContainer = document.getElementById('mealsContainer');
+        btn.innerText = "CHEF IS BRAINSTORMING..."; btn.disabled = true;
+        initialVideoContainer.classList.add('hidden');
+        loadingScreenDiv.classList.remove('hidden');
+        resultsScreenDiv.classList.add('hidden');
+        loadingVideo.currentTime = 0;
+        await loadingVideo.play().catch(e => console.log("Video autoplay prevented:", e));
+        try {
+            const res = await callAI(`I have: ${ingredients.join(", ")}. Suggest 3-8 Filipino-style meals. Return ONLY JSON array: [{"name": "Name", "time": "X mins"}]`);
+            const meals = JSON.parse(res.replace(/```json|```/g, "").trim());
+            loadingVideo.pause();
+            loadingScreenDiv.classList.add('hidden');
+            resultsScreenDiv.classList.remove('hidden');
+            mealsContainer.innerHTML = meals.map(m => `
+                <div onclick="openMealOverview('${escapeHtml(m.name)}')" class="meal-card flex items-center h-[100px] border border-green-200 shadow-sm animate-fade-in-down rounded-md px-8">
+                    <div class="flex-grow"><h3 class="text-xl font-bold uppercase">${escapeHtml(m.name)}</h3><p class="text-[11px] font-bold text-gray-500 uppercase mt-1 tracking-widest">~ ${escapeHtml(m.time)}</p></div>
+                    <div class="text-gray-400 italic text-xs">VIEW DETAILS</div>
+                </div>`).join('');
+        } catch (error) { 
+            console.error(error);
+            loadingVideo.pause();
+            loadingScreenDiv.classList.add('hidden');
+            resultsScreenDiv.classList.remove('hidden');
+            mealsContainer.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-xl p-8 text-center text-red-700 font-semibold">⚠️ AI service error. Please try again.</div>';
+            alert("AI Error. Try again."); 
+        } finally { btn.innerText = "START COOKING"; btn.disabled = false; }
+    };
+
+    window.onload = () => {
+        initialVideoContainer.classList.remove('hidden');
+        loadingScreenDiv.classList.add('hidden');
+        resultsScreenDiv.classList.add('hidden');
+        if (initialVideoElem) initialVideoElem.play().catch(e => console.log("Initial video autoplay prevented"));
+        initVideoResize();
+        const urlParams = new URLSearchParams(window.location.search);
+        const mealToOpen = urlParams.get('open');
+        if (mealToOpen) openMealOverview(decodeURIComponent(mealToOpen));
+    };
+</script>
 </body>
 </html>
