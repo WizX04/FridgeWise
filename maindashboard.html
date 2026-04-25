@@ -486,423 +486,159 @@
         </main>
     </div>
 
-    <script>
-        // --- FIREBASE CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
-            authDomain: "fridgewise-37166.firebaseapp.com",
-            databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
-            projectId: "fridgewise-37166",
-            storageBucket: "fridgewise-37166.firebasestorage.app",
-            messagingSenderId: "367251387454",
-            appId: "1:367251387454:web:ed536522f271197b3d0d6f",
-            measurementId: "G-122HEMEYBR"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const auth = firebase.auth();
-
-        let ingredients = [];
-        let currentMealName = "";
-        let currentUser = null;
-
-        const initialVideoContainer = document.getElementById('initialVideoContainer');
-        const loadingScreenDiv = document.getElementById('loadingScreen');
-        const resultsScreenDiv = document.getElementById('resultsScreen');
-        const loadingVideo = document.getElementById('loadingVideo');
-        const initialVideoElem = document.getElementById('initialVideo');
-        const videoSizeSlider = document.getElementById('videoSizeSlider');
-        const sizeValueSpan = document.getElementById('sizeValue');
-        
-        function initVideoResize() {
-            if (videoSizeSlider && sizeValueSpan && initialVideoElem) {
-                videoSizeSlider.addEventListener('input', (e) => {
-                    const percent = e.target.value;
-                    sizeValueSpan.innerText = percent + '%';
-                    const scale = percent / 100;
-                    if (window.innerWidth <= 768) {
-                        initialVideoElem.style.transform = `scale(${scale})`;
-                        initialVideoElem.style.transformOrigin = 'center center';
-                    } else {
-                        initialVideoElem.style.transform = `translate(62px, -282px) scale(${2.73 * scale})`;
-                        initialVideoElem.style.transformOrigin = 'center';
-                    }
-                });
-                videoSizeSlider.value = '100';
-                sizeValueSpan.innerText = '100%';
-                if (window.innerWidth <= 768) {
-                    initialVideoElem.style.transform = 'scale(1)';
-                } else {
-                    initialVideoElem.style.transform = 'translate(62px, -282px) scale(2.73)';
-                }
-            }
-        }
-
-auth.onAuthStateChanged((user) => {
-
-    const urlParams = new URLSearchParams(window.location.search);
-
-    const mealToOpen = urlParams.get('open');
-
-
-    if (!user) {
-
-        // If truly no user, redirect to login
-        window.location.href = "index.html";
-        return;
-    }
-
-    // USER IS LOGGED IN - Reveal the page now
-    document.body.classList.remove('loading');
-    currentUser = user;
-
-    // ... rest of your profile UI logic ...
-
-
-
-    if (mealToOpen) {
-
-        openMealFromUrl(decodeURIComponent(mealToOpen));
-
-    }
-
-    
-
-    // Ensure sidebar elements are visible
-
-    document.getElementById('leftSidebarContainer').classList.remove('hidden');
-
-    document.getElementById('logoutBtn').classList.remove('hidden');
-
-});
-        
-function openMealFromUrl(mealName) {
-    // 1. UI Switch: Hide Dashboard, Show Overview
-    document.getElementById('mainDashboard').classList.add('hidden');
-    document.getElementById('mealOverview').classList.remove('hidden');
-    
-    // 2. Set Title
-    document.getElementById('overviewMealName').textContent = mealName;
-
-    // 3. Trigger your Fetch logic
-    // Make sure 'fetchRecipeDetails' is defined somewhere in your script!
-    if (typeof fetchRecipeDetails === "function") {
-        fetchRecipeDetails(mealName); 
-    } else {
-        console.error("fetchRecipeDetails function not found!");
-    }
-}
-        function updateProfileUI(name, email) {
-            document.getElementById('userNameDisplay').textContent = name;
-            document.getElementById('userEmailDisplay').textContent = email;
-            document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
-        }
-
-        function setStarState(isFav) {
-            const star = document.getElementById('favStar');
-            const text = document.getElementById('favText');
-            if (isFav) {
-                star.innerHTML = "&#9733;";
-                star.style.color = "#facc15";
-                text.innerText = "(Favorited)";
-            } else {
-                star.innerHTML = "&#9734;";
-                star.style.color = "#9ca3af";
-                text.innerText = "(Mark as favorite)";
-            }
-        }
-
-        function addIng() { const input = document.getElementById('ingInput'); if (input.value.trim()) { ingredients.push(input.value.trim()); input.value = ''; renderList(); } }
-        function editIng(index) { const newValue = prompt("Edit ingredient:", ingredients[index]); if (newValue !== null && newValue.trim() !== "") { ingredients[index] = newValue.trim(); renderList(); } }
-        function handleKey(e) { if (e.key === "Enter") addIng(); }
-        function renderList() {
-            document.getElementById('ingList').innerHTML = ingredients.map((ing, i) => `
-                <li class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <span class="font-medium text-gray-700">${escapeHtml(ing)}</span>
-                    <div class="flex gap-4">
-                        <button onclick="editIng(${i})" class="text-blue-500 text-xs font-bold uppercase hover:underline">Edit</button>
-                        <button onclick="ingredients.splice(${i},1);renderList()" class="text-red-400 font-bold">✕</button>
-                    </div>
-                </li>`).join('');
-        }
-
-        async function openMealOverview(name) {
-            if (!currentUser) { alert("Please log in first!"); return; }
-            currentMealName = name;
-            const historyRef = database.ref(`users/${currentUser.uid}/history`).push();
-            historyRef.set({ name: name, ingredients: ingredients.length > 0 ? ingredients.join(", ") : "None specified", cookedAt: Date.now() });
-            document.getElementById('mainDashboard').classList.add('hidden');
-            document.getElementById('mealOverview').classList.remove('hidden');
-            document.getElementById('overviewMealName').innerText = name;
-            const mealId = name.replace(/[.#$/[\]]/g, "_");
-            database.ref(`users/${currentUser.uid}/favorites/${mealId}`).once('value', s => setStarState(s.exists()));
-            document.querySelectorAll('.accordion-content').forEach(el => { el.classList.remove('open'); el.innerHTML = ""; });
-            document.querySelectorAll('#accordionGroup span').forEach(s => s.innerText = "+");
-            const descEl = document.getElementById('mealDesc');
-            descEl.innerText = "";
-            const res = await callAI(`Give a short, appetizing 2-sentence Filipino description for ${name}.`);
-            typeWriter(res, descEl);
-        }
-
-      async function fetchRecipeDetails() {
-    // 1. Pull the name directly from your <h2> or <h1> header 
-    // to ensure we ALWAYS have the current dish name shown on screen.
-    const mealHeader = document.querySelector('h2').innerText; // Adjust selector to your Title ID
-    const mealName = mealHeader.replace('(Mark as favorite)', '').trim();
-
-    const mealDesc = document.getElementById('mealDesc');
-    
-    // Safety check: If for some reason the name is empty, stop the fetch.
-    if (!mealName || mealName === "") {
-        console.error("Meal name is missing!");
-        return;
-    }
-
-    mealDesc.innerHTML = `<span class="text-blue-500 animate-pulse">Chef Linguini is preparing ${mealName}...</span>`;
-
-    const payload = {
-        contents: [{ 
-            parts: [{ text: `Provide a full recipe for: ${mealName}` }] 
-        }],
-        generationConfig: {
-            response_mime_type: "application/json",
-            response_schema: {
-                type: "OBJECT",
-                properties: {
-                    chef_note: { type: "STRING" },
-                    ingredients: { type: "ARRAY", items: { type: "STRING" } },
-                    nutrition: { type: "STRING" },
-                    steps: { type: "ARRAY", items: { type: "STRING" } },
-                    analysis: { type: "STRING" },
-                    addons: { type: "STRING" }
-                }
-            }
-        }
+<script>
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+        authDomain: "fridgewise-37166.firebaseapp.com",
+        databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
+        projectId: "fridgewise-37166",
+        storageBucket: "fridgewise-37166.firebasestorage.app",
+        messagingSenderId: "367251387454",
+        appId: "1:367251387454:web:ed536522f271197b3d0d6f"
     };
 
-    try {
-        // Use the Gemini 3.1 Flash-Lite endpoint for better reliability in deployments
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${firebaseConfig.apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const auth = firebase.auth();
 
-        const data = await response.json();
-        
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-            const recipe = JSON.parse(data.candidates[0].content.parts[0].text);
-            updateDashboardUI(recipe);
+    let ingredients = [];
+    let currentMealName = "";
+    let currentUser = null;
+
+    // 🔥 GLOBAL AUTH SYNC (MAIN FIX)
+    auth.onAuthStateChanged((user) => {
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const mealToOpen = urlParams.get('open');
+
+        if (!user) {
+            window.location.href = "index.html";
+            return;
         }
-    } catch (error) {
-        console.error("Fetch Error:", error);
-        mealDesc.innerText = "Connection lost. Please refresh and try again.";
-    }
-}
-        
-function updateDashboardUI(recipe) {
-    // 1. Update Chef's Note
-    document.getElementById('mealDesc').innerText = recipe.chef_note || "Recipe loaded!";
 
-    // 2. Map JSON to your specific accordion sections
-    const accordionContents = document.querySelectorAll('.accordion-content');
-    
-    // Helper to format arrays into readable lists
-    const formatList = (item) => Array.isArray(item) ? item.join('<br>') : item;
+        currentUser = user;
 
-    if (accordionContents.length >= 5) {
-        accordionContents[0].innerHTML = `<div class="p-4">${formatList(recipe.ingredients)}</div>`;
-        accordionContents[1].innerHTML = `<div class="p-4">${recipe.nutrition}</div>`;
-        accordionContents[2].innerHTML = `<div class="p-4">${formatList(recipe.steps)}</div>`;
-        accordionContents[3].innerHTML = `<div class="p-4">${recipe.analysis}</div>`;
-        accordionContents[4].innerHTML = `<div class="p-4">${recipe.addons}</div>`;
-    }
-}
+        const name = user.displayName || "User";
+        const email = user.email || "No email";
 
-function renderRecipeToUI(text) {
-    // This helper splits the AI text based on the headers we requested in the prompt
-    const parse = (header) => {
-        const regex = new RegExp(`${header}:([\\s\\S]*?)(?=[A-Z_]+:|$)`, 'i');
-        const match = text.match(regex);
-        return match ? match[1].trim() : "Details not found.";
-    };
+        updateProfileUI(name, email);
 
-    // 1. Update Chef's Note
-    document.getElementById('mealDesc').innerText = parse("CHEF_NOTE");
+        document.getElementById('leftSidebarContainer').classList.remove('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
 
-    // 2. Map the sections to your specific Accordion boxes
-    const sections = [
-        parse("INGREDIENTS"),
-        parse("NUTRITION_FACTS"),
-        parse("STEPS"),
-        parse("ANALYSIS"),
-        parse("ADD_ONS")
-    ];
-
-    const accordionContainers = document.querySelectorAll('.accordion-content');
-    
-    sections.forEach((content, index) => {
-        if (accordionContainers[index]) {
-            // Clean up markdown stars/dashes for cleaner HTML display
-            const formattedContent = content
-                .replace(/\*/g, '') // Remove markdown bold stars
-                .replace(/\n/g, '<br>'); // Convert newlines to breaks
-            
-            accordionContainers[index].innerHTML = `<div class="p-4 text-gray-700">${formattedContent}</div>`;
+        if (mealToOpen) {
+            openMealFromUrl(decodeURIComponent(mealToOpen));
         }
     });
-}
 
-        function toggleFavorite() {
-            if (!currentUser || !currentMealName) return;
-            const mealId = currentMealName.replace(/[.#$/[\]]/g, "_");
-            const favRef = database.ref(`users/${currentUser.uid}/favorites/${mealId}`);
-            favRef.once('value', snapshot => {
-                if (snapshot.exists()) {
-                    favRef.remove().then(() => { setStarState(false); alert("The meal is unfavorited"); });
-                } else {
-                    favRef.set({ name: currentMealName, savedAt: Date.now() }).then(() => { setStarState(true); alert("The meal is favorited"); });
-                }
+    function updateProfileUI(name, email) {
+        document.getElementById('userNameDisplay').textContent = name;
+        document.getElementById('userEmailDisplay').textContent = email;
+        document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+    }
+
+    function addIng() {
+        const input = document.getElementById('ingInput');
+        if (input.value.trim()) {
+            ingredients.push(input.value.trim());
+            input.value = '';
+            renderList();
+        }
+    }
+
+    function handleKey(e) {
+        if (e.key === "Enter") addIng();
+    }
+
+    function renderList() {
+        document.getElementById('ingList').innerHTML = ingredients.map((ing, i) => `
+            <li class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border">
+                <span>${ing}</span>
+                <button onclick="ingredients.splice(${i},1);renderList()">✕</button>
+            </li>
+        `).join('');
+    }
+
+    // 🔥 CORRECT PLACE FOR YOUR SNIPPET
+    async function openMealOverview(name) {
+        const user = firebase.auth().currentUser;
+
+        if (!user) {
+            alert("Please log in first!");
+            return;
+        }
+
+        currentUser = user; // ✅ CORRECT
+
+        currentMealName = name;
+
+        document.getElementById('mainDashboard').classList.add('hidden');
+        document.getElementById('mealOverview').classList.remove('hidden');
+        document.getElementById('overviewMealName').innerText = name;
+
+        fetchRecipeDetails(name);
+    }
+
+    async function fetchRecipeDetails(mealName) {
+        const mealDesc = document.getElementById('mealDesc');
+
+        mealDesc.innerHTML = "Loading recipe...";
+
+        try {
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ prompt: mealName })
             });
+
+            const data = await res.json();
+            mealDesc.innerText = data.response || "No data.";
+
+        } catch (e) {
+            mealDesc.innerText = "Error loading recipe.";
+        }
+    }
+
+    function backToDashboard() {
+        document.getElementById('mealOverview').classList.add('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+    }
+
+    // 🔥 FIXED COOK BUTTON
+    document.getElementById('cookBtn').onclick = async () => {
+
+        if (!firebase.auth().currentUser) {
+            alert("Please log in first!");
+            return;
         }
 
-        async function toggleAccordion(btn, type) {
-            const content = btn.nextElementSibling;
-            const span = btn.querySelector('span');
-            if (content.classList.contains('open')) {
-                content.classList.remove('open'); span.innerText = "+";
-            } else {
-                content.innerHTML = "<p class='py-4 italic text-gray-400 text-center'>Consulting the chef...</p>";
-                content.classList.add('open'); span.innerText = "-";
-                const aiRes = await callAI(`Provide ${type} for "${currentMealName}". Keep it concise and use bullets.`);
-                content.innerHTML = ""; 
-                const list = document.createElement('ul');
-                list.className = "ai-bullet-list typing";
-                content.appendChild(list);
-                const items = aiRes.split(/\n/).filter(l => l.trim().length > 0).map(l => l.replace(/^(\d+\.|\*|-)\s+/, ""));
-                typeWriterList(items, list);
-            }
+        currentUser = firebase.auth().currentUser;
+
+        if (ingredients.length === 0) {
+            alert("Add ingredients first!");
+            return;
         }
 
-        function shareMeal(platform) {
-            if (!currentMealName) return;
-            const baseUrl = window.location.href.split('?')[0]; 
-            const shareUrl = `${baseUrl}?open=${encodeURIComponent(currentMealName)}`;
-            if (platform === 'link') {
-                navigator.clipboard.writeText(shareUrl).then(() => alert("Recipe link copied to clipboard!"));
-            } else if (platform === 'messenger') {
-                window.open(`https://www.messenger.com/share/?link=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=400');
-            } else if (platform === 'instagram') {
-                navigator.clipboard.writeText(shareUrl).then(() => alert("Link copied! You can now paste this link in your Instagram DM or Story."));
-            }
+        const mealsContainer = document.getElementById('mealsContainer');
+        mealsContainer.innerHTML = "Thinking...";
+
+        try {
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ prompt: ingredients.join(", ") })
+            });
+
+            const data = await res.json();
+
+            mealsContainer.innerHTML = `<div onclick="openMealOverview('${data.response}')">${data.response}</div>`;
+
+        } catch {
+            mealsContainer.innerHTML = "Error.";
         }
-
-        async function callAI(text) {
-            try {
-                const res = await fetch('/api/generate', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ prompt: text })
-                });
-                const data = await res.json();
-                return data.response;
-            } catch { return "Error loading content."; }
-        }
-
-        function typeWriter(text, element, speed = 15) {
-            let i = 0; element.classList.add('typing');
-            (function type() {
-                if (i < text.length) { element.innerHTML += text.charAt(i); i++; setTimeout(type, speed); }
-                else { element.classList.remove('typing'); }
-            })();
-        }
-
-        function typeWriterList(items, container, speed = 10) {
-            let itemIdx = 0;
-            (function nextItem() {
-                if (itemIdx < items.length) {
-                    const li = document.createElement('li');
-                    container.appendChild(li);
-                    let charIdx = 0;
-                    (function typeChar() {
-                        if (charIdx < items[itemIdx].length) {
-                            li.innerHTML += items[itemIdx].charAt(charIdx); charIdx++; setTimeout(typeChar, speed);
-                        } else { itemIdx++; nextItem(); }
-                    })();
-                } else { container.classList.remove('typing'); }
-            })();
-        }
-
-        function backToDashboard() {
-            document.getElementById('mealOverview').classList.add('hidden');
-            document.getElementById('mainDashboard').classList.remove('hidden');
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Sidebar
-        const sidebar = document.getElementById('sidebar');
-        const userSidebar = document.getElementById('userSidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        function closeAll() {
-            sidebar.classList.add('-translate-x-full');
-            userSidebar.classList.add('translate-x-full');
-            overlay.classList.remove('opacity-100', 'pointer-events-auto');
-        }
-        document.getElementById('sidebarToggle').onclick = () => { sidebar.classList.remove('-translate-x-full'); overlay.classList.add('opacity-100', 'pointer-events-auto'); };
-        document.getElementById('userMenuToggle').onclick = () => { userSidebar.classList.remove('translate-x-full'); overlay.classList.add('opacity-100', 'pointer-events-auto'); };
-        document.getElementById('sidebarClose').onclick = closeAll;
-        document.getElementById('userSidebarClose').onclick = closeAll;
-        overlay.onclick = closeAll;
-        document.getElementById('logoutBtn').addEventListener('click', () => { auth.signOut().then(() => window.location.href = 'index.html'); });
-
-        // Cook button logic
-        document.getElementById('cookBtn').onclick = async () => {
-            if (!currentUser) { alert("Please log in first!"); return; }
-            if (ingredients.length === 0) return alert("Add ingredients first!");
-            const btn = document.getElementById('cookBtn');
-            const mealsContainer = document.getElementById('mealsContainer');
-            btn.innerText = "CHEF IS BRAINSTORMING..."; btn.disabled = true;
-            initialVideoContainer.classList.add('hidden');
-            loadingScreenDiv.classList.remove('hidden');
-            resultsScreenDiv.classList.add('hidden');
-            loadingVideo.currentTime = 0;
-            await loadingVideo.play().catch(e => console.log("Video autoplay prevented:", e));
-            try {
-                const res = await callAI(`I have: ${ingredients.join(", ")}. Suggest 3-8 Filipino-style meals. Return ONLY JSON array: [{"name": "Name", "time": "X mins"}]`);
-                const meals = JSON.parse(res.replace(/```json|```/g, "").trim());
-                loadingVideo.pause();
-                loadingScreenDiv.classList.add('hidden');
-                resultsScreenDiv.classList.remove('hidden');
-                mealsContainer.innerHTML = meals.map(m => `
-                    <div onclick="openMealOverview('${escapeHtml(m.name)}')" class="meal-card flex items-center h-[100px] border border-green-200 shadow-sm animate-fade-in-down rounded-md px-8">
-                        <div class="flex-grow"><h3 class="text-xl font-bold uppercase">${escapeHtml(m.name)}</h3><p class="text-[11px] font-bold text-gray-500 uppercase mt-1 tracking-widest">~ ${escapeHtml(m.time)}</p></div>
-                        <div class="text-gray-400 italic text-xs">VIEW DETAILS</div>
-                    </div>`).join('');
-            } catch (error) { 
-                console.error(error);
-                loadingVideo.pause();
-                loadingScreenDiv.classList.add('hidden');
-                resultsScreenDiv.classList.remove('hidden');
-                mealsContainer.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-xl p-8 text-center text-red-700 font-semibold">⚠️ AI service error. Please try again.</div>';
-                alert("AI Error. Try again."); 
-            } finally { btn.innerText = "START COOKING"; btn.disabled = false; }
-        };
-
-        window.onload = () => {
-            initialVideoContainer.classList.remove('hidden');
-            loadingScreenDiv.classList.add('hidden');
-            resultsScreenDiv.classList.add('hidden');
-            if (initialVideoElem) initialVideoElem.play().catch(e => console.log("Initial video autoplay prevented"));
-            initVideoResize();
-            const urlParams = new URLSearchParams(window.location.search);
-            const mealToOpen = urlParams.get('open');
-            if (mealToOpen) openMealOverview(decodeURIComponent(mealToOpen));
-        };
-    </script>
+    };
+</script>
 </body>
 </html>
 
