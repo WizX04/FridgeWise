@@ -538,83 +538,60 @@
             }
         }
 
-let ingredients = [];
-let currentMealName = "";
-let currentUser = null;
-let activeUser = null; // Add this line
-let isAuthReady = false; // Add this to track if Firebase is "awake"
+auth.onAuthStateChanged((user) => {
 
-        auth.onAuthStateChanged((user) => {
-    isAuthReady = true; // Firebase is now finished checking the session
-    
-    if (user) {
-        activeUser = user;
-        currentUser = user;
-        document.body.classList.remove('loading');
-        
-        // Handle deep links (like when clicking back/forward in browser)
-        const urlParams = new URLSearchParams(window.location.search);
-        const mealToOpen = urlParams.get('open');
-        if (mealToOpen) {
-            openMealFromUrl(decodeURIComponent(mealToOpen));
-        }
-    } else {
-        // Only redirect if we aren't already on the login page
-        if (!window.location.pathname.includes("index.html")) {
-            window.location.href = "index.html";
-        }
-    }
-});
-      async function handleMealSelection(mealName) {
-    // If Firebase isn't ready yet, wait a tiny bit and try again
-    if (!isAuthReady) {
-        setTimeout(() => handleMealSelection(mealName), 500);
-        return;
-    }
+    const urlParams = new URLSearchParams(window.location.search);
 
-    if (!activeUser) {
-        alert("Please login first!");
+    const mealToOpen = urlParams.get('open');
+
+
+    if (!user) {
+
+        // If truly no user, redirect to login
         window.location.href = "index.html";
         return;
     }
 
-    // This updates the URL so clicking "Back" works, 
-    // but DOES NOT refresh the page (keeping you logged in)
-    const newUrl = `${window.location.pathname}?open=${encodeURIComponent(mealName)}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
+    // USER IS LOGGED IN - Reveal the page now
+    document.body.classList.remove('loading');
+    currentUser = user;
 
-    // Call your display logic
-    openMealFromUrl(mealName);
-}
+    // ... rest of your profile UI logic ...
 
-        // 4. YOUR EXISTING OPEN MEAL FUNCTION
-       function openMealFromUrl(mealName) {
-    if (!mealName) return;
 
-    // 1. Force the UI Switch
-    const mainDash = document.getElementById('mainDashboard');
-    const mealOver = document.getElementById('mealOverview');
-    
-    if (mainDash && mealOver) {
-        mainDash.classList.add('hidden');
-        mealOver.classList.remove('hidden');
+
+    if (mealToOpen) {
+
+        openMealFromUrl(decodeURIComponent(mealToOpen));
+
     }
 
-    // 2. Update the Title
-    const titleElem = document.getElementById('overviewMealName');
-    if (titleElem) titleElem.textContent = mealName;
-    currentMealName = mealName;
+    
 
-    // 3. The Fetch Trigger
-    // Ensure your fetchRecipeDetails function is ready to receive this
+    // Ensure sidebar elements are visible
+
+    document.getElementById('leftSidebarContainer').classList.remove('hidden');
+
+    document.getElementById('logoutBtn').classList.remove('hidden');
+
+});
+        
+function openMealFromUrl(mealName) {
+    // 1. UI Switch: Hide Dashboard, Show Overview
+    document.getElementById('mainDashboard').classList.add('hidden');
+    document.getElementById('mealOverview').classList.remove('hidden');
+    
+    // 2. Set Title
+    document.getElementById('overviewMealName').textContent = mealName;
+
+    // 3. Trigger your Fetch logic
+    // Make sure 'fetchRecipeDetails' is defined somewhere in your script!
     if (typeof fetchRecipeDetails === "function") {
-        console.log("Fetching data for:", mealName);
         fetchRecipeDetails(mealName); 
     } else {
-        console.error("fetchRecipeDetails is not defined in this scope!");
+        console.error("fetchRecipeDetails function not found!");
     }
 }
-
         function updateProfileUI(name, email) {
             document.getElementById('userNameDisplay').textContent = name;
             document.getElementById('userEmailDisplay').textContent = email;
@@ -928,3 +905,5 @@ function renderRecipeToUI(text) {
     </script>
 </body>
 </html>
+
+
