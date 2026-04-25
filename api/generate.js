@@ -8,8 +8,9 @@ export default async function handler(req, res) {
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   
-  // Try the most standard Flash string
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // Update to the latest 2026 model names
+  // Try Gemini 3 Flash for speed, or 2.5 Flash for stability
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
   try {
     const { prompt } = body;
@@ -17,16 +18,15 @@ export default async function handler(req, res) {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-
-    res.status(200).json({ text });
+    
+    res.status(200).json({ text: response.text() });
   } catch (error) {
     console.error("Gemini Error:", error);
     
-    // If Flash specifically fails with a 404, try the classic Pro model as a backup
+    // Automatic Fallback to 2.5 Pro if 3 Flash is unavailable
     if (error.message.includes("404")) {
       try {
-        const backupModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const backupModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
         const result = await backupModel.generateContent(body.prompt);
         const response = await result.response;
         return res.status(200).json({ text: response.text() });
