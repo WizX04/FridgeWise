@@ -538,19 +538,36 @@
             }
         }
 
-        auth.onAuthStateChanged((user) => {
-            if (!user) {
-                window.location.href = "index.html";
-                return;
-            }
-            currentUser = user;
-            database.ref('users/' + user.uid).once('value').then((snapshot) => {
-                const data = snapshot.val();
-                const name = (data && data.username) ? data.username : (user.displayName || "User");
-                updateProfileUI(name, user.email);
-            });
-            document.getElementById('leftSidebarContainer').classList.remove('hidden');
-            document.getElementById('brandLogo').classList.add('hidden');
+auth.onAuthStateChanged((user) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mealToOpen = urlParams.get('open');
+
+    if (!user) {
+        // Double check: If there's no user session, we MUST go to login
+        window.location.href = "index.html";
+        return;
+    }
+
+    // User is authenticated
+    currentUser = user;
+
+    // 1. Handle Profile UI (Always do this)
+    database.ref('users/' + user.uid).once('value').then((snapshot) => {
+        const data = snapshot.val();
+        const name = (data && data.username) ? data.username : (user.displayName || "User");
+        updateProfileUI(name, user.email);
+    });
+
+    // 2. Setup Sidebar Visibility
+    document.getElementById('leftSidebarContainer').classList.remove('hidden');
+    document.getElementById('brandLogo').classList.add('hidden');
+
+    // 3. Check if we need to deep-link into a recipe
+    if (mealToOpen) {
+        // Delay slightly to ensure DOM is ready or just call it directly
+        openMealFromUrl(decodeURIComponent(mealToOpen));
+    }
+});
             document.getElementById('logoutBtn').classList.remove('hidden');
         });
 
