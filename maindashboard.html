@@ -630,22 +630,29 @@ function openMealFromUrl(mealName) {
             typeWriter(res, descEl);
         }
 
-        async function fetchRecipeDetails(mealName) {
+       async function fetchRecipeDetails(mealName) {
     const mealDesc = document.getElementById('mealDesc');
-    
-    // UI Feedback
     mealDesc.innerHTML = `<span class="text-blue-500 animate-pulse">Chef Linguini is preparing ${mealName}...</span>`;
 
     const payload = {
-        // System instruction forces the model to stay in "Chef Mode"
-        system_instruction: {
-            parts: [{ text: "You are a professional chef. When the user provides a food name, output a recipe strictly in JSON format. Use these keys: chef_note, ingredients, nutrition, steps, analysis, addons. No conversational filler." }]
-        },
         contents: [{ 
-            parts: [{ text: `Generate a complete recipe for: ${mealName}` }] 
+            parts: [{ text: `Provide a detailed recipe and nutritional breakdown for: ${mealName}` }] 
         }],
         generationConfig: {
-            response_mime_type: "application/json"
+            response_mime_type: "application/json",
+            // This schema forces the model to provide exactly what your UI needs
+            response_schema: {
+                type: "OBJECT",
+                properties: {
+                    chef_note: { type: "STRING" },
+                    ingredients: { type: "ARRAY", items: { type: "STRING" } },
+                    nutrition: { type: "STRING" },
+                    steps: { type: "ARRAY", items: { type: "STRING" } },
+                    analysis: { type: "STRING" },
+                    addons: { type: "STRING" }
+                },
+                required: ["chef_note", "ingredients", "nutrition", "steps", "analysis", "addons"]
+            }
         }
     };
 
@@ -657,18 +664,24 @@ function openMealFromUrl(mealName) {
         });
 
         const data = await response.json();
+        const recipe = JSON.parse(data.candidates[0].content.parts[0].text);
         
-        // Handle the Flash-Lite JSON response
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-            const recipe = JSON.parse(data.candidates[0].content.parts[0].text);
-            updateDashboardUI(recipe);
-        }
+        // Update the UI
+        document.getElementById('mealDesc').innerText = recipe.chef_note;
+        
+        const accordionContents = document.querySelectorAll('.accordion-content');
+        accordionContents[0].innerHTML = `<ul class="p-4 list-disc">${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>`;
+        accordionContents[1].innerHTML = `<div class="p-4">${recipe.nutrition}</div>`;
+        accordionContents[2].innerHTML = `<ol class="p-4 list-decimal">${recipe.steps.map(s => `<li>${s}</li>`).join('')}</ol>`;
+        accordionContents[3].innerHTML = `<div class="p-4">${recipe.analysis}</div>`;
+        accordionContents[4].innerHTML = `<div class="p-4">${recipe.addons}</div>`;
+
     } catch (error) {
         console.error("Fetch Error:", error);
-        mealDesc.innerText = "Error loading recipe. Check console for details.";
+        mealDesc.innerText = "Chef Linguini is having trouble. Try again?";
     }
 }
-
+        
 function updateDashboardUI(recipe) {
     // 1. Update Chef's Note
     document.getElementById('mealDesc').innerText = recipe.chef_note || "Recipe loaded!";
