@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FridgeWise - Direct Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        body { 
+            background-color: #f0fff4; 
+            scroll-behavior: smooth;
+        }
+
+        .typing::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .hidden { display: none; }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease;
+        }
+        .accordion-content.open {
+            max-height: 1000px;
+            padding-bottom: 1.5rem;
+        }
+
+        .category-box {
+            background-color: white;
+            border: 2px solid #dcfce7;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: border-color 0.2s ease;
+        }
+        .category-box:hover { border-color: #86efac; }
+
+        .ai-bullet-list {
+            list-style-type: disc;
+            margin-left: 1.25rem;
+            margin-top: 0.5rem;
+        }
+        .ai-bullet-list li { margin-bottom: 0.5rem; font-style: italic; color: #374151; }
+
+        .share-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .share-btn:hover {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        #mealOverview {
+            scroll-margin-top: 80px;
+        }
+
+        /* Sidebar logo styling - adapted from index.html */
+        .sidebar-logo {
+            height: 50px;
+            width: auto;
+            mix-blend-mode: multiply;
+            display: block;
+        }
+
+        /* Smooth scrolling for mobile */
+        @media (max-width: 768px) {
+            #mealOverview {
+                scroll-margin-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-900 overflow-x-hidden">
+
+    <!-- Left Sidebar -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-[60]">
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-10">
+                <img src="FridgeWise.png" alt="FridgeWise Logo" class="sidebar-logo">
+                <button id="sidebarClose" class="text-gray-400 hover:text-red-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a href="index.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> Home
+                </a>
+                <a href="maindashboard.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg> Main Dashboard
+                </a>
+                <a href="secondarydashboard.html" class="flex items-center py-3 px-4 rounded-xl bg-green-50 text-green-900 border-l-4 border-green-600 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg> Second Dashboard
+                </a>
+                <div class="my-4 border-t border-gray-100"></div>
+                <a href="cookinghistory.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Cooking History
+                </a>
+                <a href="favoritemeal.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> Favorite Recipes
+                </a>
+                <a href="aboutus.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> About Us
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Right Sidebar (User Profile) -->
+    <div id="userSidebar" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-[60] border-l border-gray-100">
+        <div class="p-8 flex flex-col h-full">
+            <div class="flex items-center justify-between mb-8">
+                <img src="FridgeWise.png" alt="FridgeWise Logo" class="sidebar-logo">
+                <button id="userSidebarClose" class="text-gray-400 hover:text-red-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="text-center mb-8 bg-green-50 py-6 rounded-2xl border border-green-100">
+                <div class="w-20 h-20 bg-white rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm border-2 border-green-200">
+                    <span id="userInitial" class="text-2xl font-bold text-green-700 uppercase">?</span>
+                </div>
+                <h3 id="userNameDisplay" class="text-lg font-bold text-gray-900 px-4 break-words">Loading...</h3>
+                <p id="userEmailDisplay" class="text-xs text-gray-500 px-4 break-all italic">...</p>
+            </div>
+
+            <div class="border-t border-gray-100 my-4"></div>
+            
+            <nav class="space-y-2">
+                <a href="accountdetails.html" class="flex items-center justify-between w-full p-4 rounded-xl text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-all group border border-transparent hover:border-blue-100">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        <span class="font-bold text-sm uppercase tracking-tight">Account Details</span>
+                    </div>
+                    <svg class="w-4 h-4 text-gray-300 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+            </nav>
+            <button id="logoutBtn" class="w-full mt-auto bg-red-50 text-red-600 font-bold py-4 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                LOGOUT
+            </button>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 z-50"></div>
+
+    <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+        <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center">
+                <button id="sidebarToggle" class="text-gray-600 hover:text-gray-900 p-2">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="h-8 border-l border-green-300 mx-4"></div>
+                <h1 class="text-2xl font-extrabold tracking-tighter text-[#065f46]">DIGITAL KITCHEN</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="userMenuToggle" class="text-gray-700 bg-white hover:bg-gray-50 rounded-full p-1.5 border border-gray-300 shadow-sm">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <div id="searchView" class="flex flex-col min-h-[calc(100vh-64px)] items-center justify-center p-6">
+        <div class="w-full max-w-2xl text-center space-y-8">
+            <h2 class="text-4xl md:text-5xl font-black text-gray-800 uppercase tracking-tighter">What you want to cook for today?</h2>
+            <div class="space-y-4">
+                <input type="text" id="mealSearchInput" onkeydown="if(event.key==='Enter')handleDirectSearch()" placeholder="Enter meal name..." class="w-full border border-gray-400 p-5 rounded-xl text-xl outline-none focus:border-blue-500 shadow-sm transition-all bg-white">
+                <button id="startCookingBtn" onclick="handleDirectSearch()" class="w-full bg-[#2b87da] text-white font-bold py-5 rounded-xl uppercase tracking-widest hover:bg-blue-600 shadow-lg active:scale-[0.98] transition-all">
+                    START COOKING
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mealOverview" class="hidden flex flex-col min-h-screen border-t-2 border-green-200 bg-[#f0fff4]">
+        <main class="flex-grow max-w-[1200px] mx-auto py-12 px-6 w-full">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div class="flex items-center space-x-4">
+                    <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-tight text-green-900">Meal Overview</h2>
+                    <button id="favBtn" onclick="toggleFavorite()" class="flex items-center hover:scale-105 transition-transform">
+                        <span id="favStar" class="text-2xl md:text-3xl" style="color: #9ca3af;">&#9734;</span>
+                        <span id="favText" class="text-xs md:text-sm font-bold text-gray-600 ml-2">(Mark as favorite)</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 items-start">
+                <div class="text-center">
+                    <div class="w-full aspect-square bg-white border-4 border-white shadow-lg rounded-lg overflow-hidden flex items-center justify-center">
+                        <img id="overviewImg" src="" class="w-full h-full object-cover hidden" alt="Meal Visual">
+                        <div id="imageLoader" class="text-gray-400 font-bold uppercase tracking-widest text-xs text-center p-4">Generating Visual...</div>
+                    </div>
+                    <p id="viewMealName" class="mt-4 text-lg md:text-xl font-bold uppercase tracking-widest text-green-800 break-words"></p>
+                </div>
+
+                <div class="p-2">
+                    <p id="mealDesc" class="text-gray-700 font-medium leading-relaxed italic text-sm md:text-base"></p>
+                </div>
+
+                <div class="space-y-4">
+                    <div id="accordionGroup" class="space-y-4">
+                        <div class="category-box">
+                            <button onclick="toggleAccordion(this, 'Ingredients')" class="w-full bg-[#dcfce7] p-3 md:p-4 flex justify-between items-center font-bold uppercase tracking-widest text-[#065f46] text-sm md:text-base">Ingredients <span>+</span></button>
+                            <div class="accordion-content px-4 text-sm leading-relaxed"></div>
+                        </div>
+                        <div class="category-box">
+                            <button onclick="toggleAccordion(this, 'Nutritional Facts')" class="w-full bg-[#dcfce7] p-3 md:p-4 flex justify-between items-center font-bold uppercase tracking-widest text-[#065f46] text-sm md:text-base">Nutritional Facts <span>+</span></button>
+                            <div class="accordion-content px-4 text-sm leading-relaxed"></div>
+                        </div>
+                        <div class="category-box">
+                            <button onclick="toggleAccordion(this, 'Step by Step Process')" class="w-full bg-[#dcfce7] p-3 md:p-4 flex justify-between items-center font-bold uppercase tracking-widest text-[#065f46] text-sm md:text-base">Step by Step Process <span>+</span></button>
+                            <div class="accordion-content px-4 text-sm leading-relaxed"></div>
+                        </div>
+                        <div class="category-box">
+                            <button onclick="toggleAccordion(this, 'Nutritional Analysis')" class="w-full bg-[#dcfce7] p-3 md:p-4 flex justify-between items-center font-bold uppercase tracking-widest text-[#065f46] text-sm md:text-base">Nutritional Analysis <span>+</span></button>
+                            <div class="accordion-content px-4 text-sm leading-relaxed"></div>
+                        </div>
+                        <div class="category-box">
+                            <button onclick="toggleAccordion(this, 'Add-ons Suggestion')" class="w-full bg-[#dcfce7] p-3 md:p-4 flex justify-between items-center font-bold uppercase tracking-widest text-[#065f46] text-sm md:text-base">Add-ons Suggestion <span>+</span></button>
+                            <div class="accordion-content px-4 text-sm leading-relaxed"></div>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-green-200 text-center">
+                        <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Share to</p>
+                        <div class="flex justify-center gap-4">
+                            <button onclick="shareMeal('link')" class="share-btn bg-gray-500 hover:bg-gray-600" title="Copy Link">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                            </button>
+                            <button onclick="shareMeal('messenger')" class="share-btn bg-[#0084FF] hover:bg-[#0073e6]" title="Share on Messenger">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 4.973 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.08-2.268c1.12.312 2.304.48 3.528.48 6.627 0 12-4.973 12-11.111C24 4.973 18.627 0 12 0zm3.84 12.656l-2.4-2.56-4.64 2.56 5.12-5.44 2.4 2.56 4.64-2.56-5.12 5.44z"/></svg>
+                            </button>
+                            <button onclick="shareMeal('instagram')" class="share-btn bg-[#E4405F] hover:bg-[#d62976]" title="Share on Instagram">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849s-.011 3.584-.069 4.849c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.849-.07c-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849s.012-3.584.07-4.849c.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.058-1.69-.072-4.949-.072zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- FIREBASE & API CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            authDomain: "fridgewise-37166.firebaseapp.com",
+            databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
+            projectId: "fridgewise-37166",
+            storageBucket: "fridgewise-37166.firebasestorage.app",
+            messagingSenderId: "367251387454",
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+        const API_KEY = "AIzaSyDgM-qux49wz_X24jdM8-BChykEAwWBkDc";
+        
+        let currentMealName = "";
+        let currentUser = null;
+
+        // --- AUTH STATE CHECK ---
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = "index.html";
+                return;
+            }
+            currentUser = user;
+            
+            // Load user profile data
+            database.ref('users/' + user.uid).once('value').then((snapshot) => {
+                const data = snapshot.val();
+                const name = (data && data.username) ? data.username : (user.displayName || "User");
+                updateProfileUI(name, user.email);
+            });
+        });
+
+        // --- UPDATE PROFILE UI ---
+        function updateProfileUI(name, email) {
+            document.getElementById('userNameDisplay').textContent = name;
+            document.getElementById('userEmailDisplay').textContent = email;
+            document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+        }
+
+        // --- SIDEBAR LOGIC ---
+        const sidebar = document.getElementById('sidebar');
+        const userSidebar = document.getElementById('userSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        function closeAll() {
+            sidebar.classList.add('-translate-x-full');
+            userSidebar.classList.add('translate-x-full');
+            overlay.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+
+        document.getElementById('sidebarToggle').onclick = () => {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.add('opacity-100', 'pointer-events-auto');
+        };
+
+        document.getElementById('userMenuToggle').onclick = () => {
+            userSidebar.classList.remove('translate-x-full');
+            overlay.classList.add('opacity-100', 'pointer-events-auto');
+        };
+
+        document.getElementById('sidebarClose').onclick = closeAll;
+        document.getElementById('userSidebarClose').onclick = closeAll;
+        overlay.onclick = closeAll;
+
+        // --- LOGOUT ACTION ---
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = 'index.html';
+            });
+        });
+
+        // --- CORE FUNCTIONS ---
+        async function handleDirectSearch() {
+            if (!currentUser) {
+                alert("Please log in first!");
+                return;
+            }
+            
+            const input = document.getElementById('mealSearchInput');
+            const mealName = input.value.trim();
+            const btn = document.getElementById('startCookingBtn');
+
+            if (!mealName) return alert("Please enter a meal name!");
+
+            btn.innerText = "CHEF IS BRAINSTORMING..."; 
+            btn.disabled = true;
+            currentMealName = mealName;
+
+            document.querySelectorAll('.accordion-content').forEach(el => { el.classList.remove('open'); el.innerHTML = ""; });
+            document.querySelectorAll('#accordionGroup span').forEach(s => s.innerText = "+");
+
+            // --- LOG TO COOKING HISTORY (User-specific) ---
+            const historyRef = database.ref(`users/${currentUser.uid}/history`).push();
+            historyRef.set({
+                name: mealName,
+                ingredients: "Direct Search",
+                cookedAt: Date.now()
+            });
+
+            // Show meal overview
+            document.getElementById('mealOverview').classList.remove('hidden');
+            document.getElementById('searchView').classList.add('hidden');
+            document.getElementById('viewMealName').innerText = mealName;
+            
+            const mealId = mealName.replace(/[.#$/[\]]/g, "_");
+            database.ref(`users/${currentUser.uid}/favorites/${mealId}`).once('value', s => setStarState(s.exists()));
+
+            const img = document.getElementById('overviewImg');
+            const loader = document.getElementById('imageLoader');
+            img.classList.add('hidden'); loader.classList.remove('hidden');
+            img.src = `https://loremflickr.com/600/600/${encodeURIComponent(mealName)},dish,food/all?lock=${Math.floor(Math.random()*1000)}`;
+            img.onload = () => { img.classList.remove('hidden'); loader.classList.add('hidden'); };
+
+            // AUTO SCROLL TO MEAL OVERVIEW
+            setTimeout(() => {
+                const mealOverview = document.getElementById('mealOverview');
+                mealOverview.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+            }, 100);
+
+            const descEl = document.getElementById('mealDesc');
+            descEl.innerText = "";
+            const res = await callAI(`Give a short, appetizing 2-sentence Filipino description for ${mealName}.`);
+            typeWriter(res, descEl);
+
+            btn.innerText = "START COOKING"; 
+            btn.disabled = false;
+        }
+
+        async function toggleAccordion(btn, type) {
+            const content = btn.nextElementSibling;
+            const span = btn.querySelector('span');
+            if (content.classList.contains('open')) {
+                content.classList.remove('open'); span.innerText = "+";
+            } else {
+                content.innerHTML = "<p class='py-4 italic text-gray-400 text-center'>Consulting the chef...</p>";
+                content.classList.add('open'); span.innerText = "-";
+                const aiRes = await callAI(`Provide ${type} for "${currentMealName}". Keep it concise and use bullets.`);
+                content.innerHTML = ""; 
+                const list = document.createElement('ul');
+                list.className = "ai-bullet-list typing";
+                content.appendChild(list);
+                const items = aiRes.split(/\n/).filter(l => l.trim().length > 0).map(l => l.replace(/^(\d+\.|\*|-)\s+/, ""));
+                typeWriterList(items, list);
+            }
+        }
+
+        async function callAI(text) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                });
+                const data = await res.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch { return "Error loading content."; }
+        }
+
+        function typeWriter(text, element) {
+            let i = 0; element.classList.add('typing');
+            (function type() {
+                if (i < text.length) { element.innerHTML += text.charAt(i); i++; setTimeout(type, 15); }
+                else { element.classList.remove('typing'); }
+            })();
+        }
+
+        function typeWriterList(items, container) {
+            let itemIdx = 0;
+            (function nextItem() {
+                if (itemIdx < items.length) {
+                    const li = document.createElement('li');
+                    container.appendChild(li);
+                    let charIdx = 0;
+                    (function typeChar() {
+                        if (charIdx < items[itemIdx].length) {
+                            li.innerHTML += items[itemIdx].charAt(charIdx); charIdx++; setTimeout(typeChar, 10);
+                        } else { itemIdx++; nextItem(); }
+                    })();
+                } else { container.classList.remove('typing'); }
+            })();
+        }
+
+        function toggleFavorite() {
+            if (!currentUser || !currentMealName) return;
+            const mealId = currentMealName.replace(/[.#$/[\]]/g, "_");
+            const favRef = database.ref(`users/${currentUser.uid}/favorites/${mealId}`);
+            
+            favRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    favRef.remove().then(() => { 
+                        setStarState(false); 
+                        alert("Meal removed from favorites.");
+                    });
+                } else {
+                    favRef.set({ name: currentMealName, savedAt: Date.now() }).then(() => { 
+                        setStarState(true); 
+                        alert("Meal favorited!");
+                    });
+                }
+            });
+        }
+
+        function setStarState(isFav) {
+            const star = document.getElementById('favStar');
+            const text = document.getElementById('favText');
+            if (isFav) {
+                star.innerHTML = "&#9733;";
+                star.style.color = "#facc15";
+                text.innerText = "(Favorited)";
+            } else {
+                star.innerHTML = "&#9734;";
+                star.style.color = "#9ca3af";
+                text.innerText = "(Mark as favorite)";
+            }
+        }
+
+        function shareMeal(platform) {
+            if (!currentMealName) return;
+            const baseUrl = window.location.href.split('?')[0]; 
+            const shareUrl = `${baseUrl}?open=${encodeURIComponent(currentMealName)}`;
+            
+            if (platform === 'link') {
+                navigator.clipboard.writeText(shareUrl).then(() => alert("Link copied to clipboard!"));
+            } else if (platform === 'messenger') {
+                window.open(`https://www.messenger.com/share/?link=${encodeURIComponent(shareUrl)}`, '_blank');
+            } else if (platform === 'instagram') {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("Link copied! Open Instagram to share with your friends.");
+                    window.open('https://www.instagram.com/', '_blank');
+                });
+            }
+        }
+
+        // Handle back navigation from meal overview
+        function backToSearch() {
+            document.getElementById('mealOverview').classList.add('hidden');
+            document.getElementById('searchView').classList.remove('hidden');
+            currentMealName = "";
+            // Scroll back to top smoothly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add back button functionality
+        const backButton = document.createElement('button');
+        backButton.onclick = backToSearch;
+        backButton.className = "text-[#065f46] font-bold flex items-center mb-4 hover:underline transition-all";
+        backButton.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> BACK TO SEARCH';
+        
+        // Insert back button in meal overview header if not exists
+        const mealHeader = document.querySelector('#mealOverview main');
+        if (mealHeader && !document.querySelector('#backToSearchBtn')) {
+            backButton.id = 'backToSearchBtn';
+            mealHeader.insertBefore(backButton, mealHeader.firstChild);
+        }
+
+        // Handle URL parameter for direct meal opening
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mealToOpen = urlParams.get('open');
+            if (mealToOpen) {
+                const decodedMeal = decodeURIComponent(mealToOpen);
+                document.getElementById('mealSearchInput').value = decodedMeal;
+                handleDirectSearch();
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FridgeWise - Favorite Meals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <style>
+        body { background-color: #f0fff4; }
+        .favorite-card {
+            background-color: white;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 2px solid #dcfce7;
+        }
+        .favorite-card:hover {
+            border-color: #86efac;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        /* Fade in animation for new items */
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-900">
+
+    <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+        <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+            <a href="maindashboard.html" class="text-[#065f46] font-bold flex items-center hover:underline">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> BACK TO DASHBOARD
+            </a>
+            <h1 class="text-2xl font-extrabold tracking-tighter text-[#065f46]">FRIDGEWISE</h1>
+            <div class="w-10"></div>
+        </nav>
+    </header>
+
+    <main class="max-w-[1200px] mx-auto py-12 px-6">
+        <div class="mb-10">
+            <h2 class="text-5xl font-bold text-gray-800 uppercase tracking-tight">Favorite Meals</h2>
+            <p class="text-lg text-gray-600 mt-2 italic">Your curated collection of kitchen masterpieces</p>
+        </div>
+
+        <div id="favoritesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </div>
+
+        <div id="emptyState" class="hidden py-20 text-center">
+            <div class="text-6xl mb-4">⭐</div>
+            <p class="text-gray-400 italic text-xl">No favorites saved yet. Start starring your meals on the dashboard!</p>
+            <a href="maindashboard.html" class="inline-block mt-6 bg-[#065f46] text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-green-800 transition-colors">Go to Kitchen</a>
+        </div>
+    </main>
+
+    <script>
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            authDomain: "fridgewise-37166.firebaseapp.com",
+            databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
+            projectId: "fridgewise-37166",
+            storageBucket: "fridgewise-37166.firebasestorage.app",
+            messagingSenderId: "367251387454",
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f",
+            measurementId: "G-122HEMEYBR"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        // --- FETCH DATA ---
+        const container = document.getElementById('favoritesContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        // Check authentication and load user-specific favorites
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                // Redirect to login if not authenticated
+                window.location.href = "index.html";
+                return;
+            }
+            
+            const favoritesRef = database.ref(`users/${user.uid}/favorites`);
+            
+            // Listen for data in real-time
+            favoritesRef.on('value', (snapshot) => {
+                container.innerHTML = ""; // Clear current list
+                
+                if (!snapshot.exists()) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                
+                const data = snapshot.val();
+                
+                // Convert object to array and sort by newest first
+                const sortedFavorites = Object.values(data).sort((a, b) => b.savedAt - a.savedAt);
+
+                sortedFavorites.forEach(meal => {
+                    const dateObj = new Date(meal.savedAt);
+                    
+                    // Format: March 22, 2026 | 6:26 PM
+                    const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                    });
+                    const formattedTime = dateObj.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = "favorite-card p-6 rounded-xl shadow-sm relative fade-in";
+                    // When clicked, redirect to dashboard with the meal name in the URL
+                    card.onclick = () => {
+                        window.location.href = `maindashboard.html?open=${encodeURIComponent(meal.name)}`;
+                    };
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex-grow pr-4">
+                                <h3 class="text-2xl font-bold text-gray-800 uppercase leading-tight">${escapeHtml(meal.name)}</h3>
+                                <p class="text-[10px] font-bold text-green-600 mt-2 uppercase tracking-widest flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
+                                    Saved: ${formattedDate} | ${formattedTime}
+                                </p>
+                            </div>
+                            <span class="text-yellow-400 text-2xl drop-shadow-sm">★</span>
+                        </div>
+                        <div class="mt-8 flex items-center justify-between border-t border-gray-100 pt-4">
+                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">FridgeWise Recipes</span>
+                            <span class="text-xs font-bold text-blue-500 uppercase tracking-tighter hover:text-blue-700">Open Recipe →</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            });
+        });
+
+        // Helper function to escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

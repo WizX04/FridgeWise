@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FridgeWise - Cooking History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <style>
+        body { background-color: #f0fff4; }
+        .history-row {
+            background-color: white;
+            border-left: 4px solid #2b87da;
+            transition: all 0.2s ease;
+        }
+        .history-row:hover { 
+            background-color: #f8fafc;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-900">
+
+    <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+        <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+            <a href="maindashboard.html" class="text-[#065f46] font-bold flex items-center hover:underline">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> BACK
+            </a>
+            <h1 class="text-2xl font-extrabold tracking-tighter text-[#065f46]">FRIDGEWISE</h1>
+            <div class="w-10"></div>
+        </nav>
+    </header>
+
+    <main class="max-w-[1000px] mx-auto py-12 px-6">
+        <div class="flex items-center justify-between mb-10">
+            <div>
+                <h2 class="text-5xl font-bold text-gray-800 uppercase tracking-tight">Cooking History</h2>
+                <p class="text-gray-500 mt-1 italic">A log of your culinary adventures</p>
+            </div>  
+            <button onclick="clearLogs()" class="text-xs font-bold text-red-500 border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">CLEAR LOGS</button>
+        </div>
+
+        <div id="historyList" class="space-y-4">
+            <div class="text-center py-10 text-gray-400 italic">Loading your history...</div>
+        </div>
+    </main>
+
+    <script>
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            authDomain: "fridgewise-37166.firebaseapp.com",
+            databaseURL: "https://fridgewise-37166-default-rtdb.firebaseio.com",
+            projectId: "fridgewise-37166",
+            storageBucket: "fridgewise-37166.firebasestorage.app",
+            messagingSenderId: "367251387454",
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        const listContainer = document.getElementById('historyList');
+
+        // Check authentication and load user-specific history
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                // Redirect to login if not authenticated
+                window.location.href = "index.html";
+                return;
+            }
+            
+            // Listen for user-specific history
+            const historyRef = database.ref(`users/${user.uid}/history`);
+            
+            historyRef.on('value', (snapshot) => {
+                listContainer.innerHTML = "";
+                
+                if (!snapshot.exists()) {
+                    listContainer.innerHTML = `
+                        <div class="py-20 text-center">
+                            <p class="text-gray-400 italic text-xl">No cooking history found. Go explore some recipes!</p>
+                        </div>`;
+                    return;
+                }
+
+                const data = snapshot.val();
+                // Sort by cookedAt timestamp (Newest First)
+                const sortedHistory = Object.values(data).sort((a, b) => b.cookedAt - a.cookedAt);
+
+                sortedHistory.forEach(item => {
+                    const dateObj = new Date(item.cookedAt);
+                    
+                    // Format Date: March 22, 2026
+                    const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                    });
+
+                    // Format Time: 6:53 PM
+                    const formattedTime = dateObj.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+
+                    const row = document.createElement('div');
+                    row.className = "history-row p-5 rounded-lg shadow-sm flex items-center justify-between border-l-4";
+                    row.style.borderLeftColor = "#2b87da";
+                    
+                    // Make the row clickable to open the meal
+                    row.style.cursor = "pointer";
+                    row.onclick = () => {
+                        window.location.href = `maindashboard.html?open=${encodeURIComponent(item.name)}`;
+                    };
+
+                    row.innerHTML = `
+                        <div class="flex-grow">
+                            <h4 class="text-lg font-bold text-gray-800 uppercase">${item.name}</h4>
+                            <p class="text-sm text-gray-500 italic">Ingredients: ${item.ingredients}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Visited On</p>
+                            <p class="text-sm font-bold text-gray-700">${formattedDate}</p>
+                            <p class="text-[10px] font-medium text-blue-500 uppercase">${formattedTime}</p>
+                        </div>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            });
+        });
+
+        function clearLogs() {
+            if (!auth.currentUser) return;
+            if(confirm("Are you sure you want to clear your entire cooking history? This cannot be undone.")) {
+                database.ref(`users/${auth.currentUser.uid}/history`).remove().then(() => {
+                    alert("History cleared successfully!");
+                }).catch((error) => {
+                    alert("Error clearing history: " + error.message);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

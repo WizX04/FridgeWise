@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FridgeWise - Create Account</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#f0fff4] font-sans antialiased text-gray-900 overflow-x-hidden">
+
+    <div class="flex flex-col min-h-screen">
+        <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+            <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+                <div class="flex items-center">
+                    <button class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 transition-colors">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div class="h-8 border-l border-green-300 mx-4"></div>
+                    <span class="font-bold text-green-800 text-xl uppercase tracking-tighter">FridgeWise</span>
+                </div>
+            </nav>
+        </header>
+
+        <main class="flex-grow flex items-center justify-center py-12">
+            <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Create New Account</h1>
+                    <p class="text-sm text-gray-600">Already Registered? <a href="login.html" class="text-blue-600 hover:underline">Login</a></p>
+                </div>
+
+                <form id="registerForm" class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-gray-600 mb-1">Username</label>
+                        <input type="text" id="regName" required placeholder="Elijah Kean" class="w-full border border-gray-400 bg-white p-3 outline-none focus:border-blue-500">
+                        <p id="nameError" class="text-[10px] mt-1 hidden font-bold"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-gray-600 mb-1">Email</label>
+                        <input type="email" id="regEmail" required placeholder="hello@gmail.com" class="w-full border border-gray-400 bg-white p-3 outline-none focus:border-blue-500 transition-colors">
+                        <p id="emailStatus" class="text-[10px] mt-1 font-bold uppercase"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-gray-600 mb-1">Password</label>
+                        <input type="password" id="regPass" required placeholder="******" class="w-full border border-gray-400 bg-white p-3 outline-none focus:border-blue-500">
+                        <p id="passError" class="text-[10px] text-red-500 mt-1 hidden font-bold uppercase">Password must be at least 6 characters.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-gray-600 mb-1">Date of Birth</label>
+                        <input type="date" id="regDob" required class="w-full border border-gray-400 bg-white p-3 outline-none focus:border-blue-500">
+                    </div>
+
+                    <button type="submit" id="signUpBtn" class="w-full bg-[#2b87da] text-white font-bold py-3 uppercase tracking-widest hover:bg-blue-600 transition-colors shadow-md">
+                        SIGN UP
+                    </button>
+
+                    <div class="text-center">
+                        <a href="forgotpassword.html" class="text-xs font-bold text-gray-500 hover:underline">forgot password?</a>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            authDomain: "fridgewise-37166.firebaseapp.com",
+            projectId: "fridgewise-37166",
+            storageBucket: "fridgewise-37166.firebasestorage.app",
+            messagingSenderId: "367251387454",
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        const nameInput = document.getElementById('regName');
+        const emailInput = document.getElementById('regEmail');
+        const passInput = document.getElementById('regPass');
+        const dobInput = document.getElementById('regDob');
+        const signUpBtn = document.getElementById('signUpBtn');
+        
+        const emailStatus = document.getElementById('emailStatus');
+        const nameError = document.getElementById('nameError');
+        const passError = document.getElementById('passError');
+
+        let isEmailValid = false;
+        let isNameAvailable = false;
+
+        // --- NAME CHECK (Username Availability) ---
+        nameInput.addEventListener('blur', () => {
+            const name = nameInput.value.trim();
+            if (name === "") {
+                nameInput.style.borderColor = "";
+                nameError.classList.add('hidden');
+                return;
+            }
+
+            if (name.length < 3) {
+                nameInput.style.borderColor = "red";
+                nameError.innerText = "Username too short";
+                nameError.style.color = "red";
+                nameError.classList.remove('hidden');
+                isNameAvailable = false;
+            } else {
+                db.ref('users').orderByChild('username').equalTo(name).once('value', snapshot => {
+                    if (snapshot.exists()) {
+                        nameInput.style.borderColor = "red";
+                        nameError.innerText = "This name is already taken";
+                        nameError.style.color = "red";
+                        nameError.classList.remove('hidden');
+                        isNameAvailable = false;
+                    } else {
+                        nameInput.style.borderColor = "#4ade80";
+                        nameError.innerText = "The name is available ✅";
+                        nameError.style.color = "green";
+                        nameError.classList.remove('hidden');
+                        isNameAvailable = true;
+                    }
+                });
+            }
+        });
+
+        // --- EMAIL CHECK (@gmail.com restriction + Availability) ---
+        emailInput.addEventListener('blur', () => {
+            const email = emailInput.value.trim();
+            if (email === "") {
+                emailInput.style.borderColor = "";
+                emailStatus.innerText = "";
+                return;
+            }
+
+            if (!email.endsWith('@gmail.com')) {
+                emailInput.style.borderColor = "red";
+                emailStatus.innerText = "❌ Must be a @gmail.com address";
+                emailStatus.style.color = "red";
+                isEmailValid = false;
+                return;
+            }
+
+            auth.fetchSignInMethodsForEmail(email).then((methods) => {
+                if (methods && methods.length > 0) {
+                    emailInput.style.borderColor = "red";
+                    emailStatus.innerText = "❌ Email already registered";
+                    emailStatus.style.color = "red";
+                    isEmailValid = false;
+                } else {
+                    emailInput.style.borderColor = "#4ade80";
+                    emailStatus.innerText = "✅ Email available";
+                    emailStatus.style.color = "green";
+                    isEmailValid = true;
+                }
+            }).catch(err => console.error(err));
+        });
+
+        // --- PASSWORD CHECK (Length) ---
+        passInput.addEventListener('blur', () => {
+            if (passInput.value.length < 6) {
+                passInput.style.borderColor = "red";
+                passError.classList.remove('hidden');
+            } else {
+                passInput.style.borderColor = "#4ade80";
+                passError.classList.add('hidden');
+            }
+        });
+
+        // --- SUBMIT: SAVE TO SESSION AND VERIFY ---
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            if (!isEmailValid || !isNameAvailable || passInput.value.length < 6) {
+                alert("Please fix all errors before signing up.");
+                return;
+            }
+
+            // Save user data temporarily in sessionStorage for the verification step
+            // Note: 'pass' is included here so 'createaccountcode.html' can save it to the DB later.
+            const pendingUser = {
+                username: nameInput.value.trim(),
+                email: emailInput.value.trim(),
+                pass: passInput.value,
+                dob: dobInput.value
+            };
+            
+            sessionStorage.setItem('pendingUser', JSON.stringify(pendingUser));
+
+            // Proceed to send verification code page
+            window.location.href = "createaccountcode.html";
+        });
+    </script>
+</body>
+</html>

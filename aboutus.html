@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>About Us - FridgeWise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        body { 
+            overflow-x: hidden; 
+            background-color: #f0fff4; 
+            scroll-behavior: smooth;
+        }
+        
+        /* Video Container to handle layering and background blending */
+        .video-wrapper {
+            position: relative;
+            height: 300px;
+            z-index: 30;
+            background-color: #f0fff4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-video {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+            position: relative;
+            z-index: 31;
+        }
+
+        /* Profile Card Overlap - Aligned to Bottom */
+        .profile-card {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            position: relative;
+            justify-content: center;
+            margin-bottom: 4rem;
+        }
+
+        .info-pallet {
+            margin-left: -80px;
+            margin-bottom: 15px;
+            background: white;
+            border: 2.5px solid #3b82f6;
+            border-radius: 9999px;
+            overflow: hidden;
+            width: 320px;
+            z-index: 10;
+            position: relative;
+            box-shadow: 6px 6px 15px rgba(0,0,0,0.07);
+        }
+
+        .name-box {
+            background-color: #dcfce7;
+            padding: 20px 20px 12px 95px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            color: #166534;
+            border-bottom: 2px solid #3b82f6;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .role-box {
+            padding: 12px 20px 20px 95px;
+            font-style: italic;
+            font-size: 0.85rem;
+            color: #4b5563;
+        }
+
+        /* Role Divider Line */
+        .role-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 4rem 0;
+        }
+
+        .role-divider::before,
+        .role-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 3px solid black;
+        }
+
+        .role-divider:not(:empty)::before { margin-right: 2rem; }
+        .role-divider:not(:empty)::after { margin-left: 2rem; }
+
+        /* Sidebar Logo */
+        .sidebar-logo {
+            height: 50px;
+            width: auto;
+            mix-blend-mode: multiply;
+            display: block;
+        }
+
+        /* Mobile Media Responsiveness */
+        @media (max-width: 768px) {
+            main {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+
+            .text-center.mb-24 {
+                margin-bottom: 3rem;
+            }
+
+            h1.text-7xl {
+                font-size: 3.5rem;
+            }
+
+            .role-divider {
+                font-size: 1.5rem;
+                margin: 2.5rem 0;
+            }
+
+            .role-divider::before,
+            .role-divider::after {
+                border-bottom-width: 2px;
+            }
+
+            .profile-card {
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 3rem;
+            }
+
+            .video-wrapper {
+                height: 220px;
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .info-pallet {
+                margin-left: 0;
+                margin-bottom: 0;
+                width: 260px;
+                border-radius: 30px;
+            }
+
+            .name-box {
+                padding: 15px 15px 8px 15px;
+                text-align: center;
+                font-size: 0.85rem;
+            }
+
+            .role-box {
+                padding: 8px 15px 15px 15px;
+                text-align: center;
+                font-size: 0.75rem;
+            }
+
+            .mb-24 {
+                margin-bottom: 3rem;
+            }
+
+            .text-2xl {
+                font-size: 1.1rem;
+                line-height: 1.6;
+            }
+        }
+    </style>
+</head>
+<body class="bg-[#f0fff4] font-sans antialiased text-gray-900">
+
+    <!-- Header with sidebar toggles (identical to index.html) -->
+    <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+        <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center">
+                <div id="leftSidebarContainer" class="hidden flex items-center">
+                    <button id="sidebarToggle" class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 transition-colors">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div class="h-8 border-l border-green-300 mx-4"></div>
+                </div>
+                <span class="font-bold text-green-800 text-xl ml-2 uppercase tracking-tighter whitespace-nowrap">FridgeWise</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="userMenuToggle" class="text-gray-700 bg-white hover:bg-gray-50 rounded-full p-1.5 border border-gray-300 shadow-sm">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main About Us Content (unchanged visually) -->
+    <main class="max-w-6xl mx-auto py-16 px-6">
+        <div class="text-center mb-24">
+            <h1 class="text-7xl font-black text-gray-800 uppercase italic tracking-tighter">About Us</h1>
+            <p class="text-xl text-gray-600 italic mt-2">A team behind FridgeWise</p>
+        </div>
+
+        <section class="mb-24">
+            <h2 class="role-divider text-4xl font-black uppercase italic">Scrum Master</h2>
+            <div class="flex justify-center">
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Francheska.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Francheska May<br>Perez</div>
+                        <div class="role-box">Scrum Master</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-24">
+            <h2 class="role-divider text-4xl font-black uppercase italic">Senior Developer</h2>
+            <div class="flex justify-center">
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Louise.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Louise Hagosojos</div>
+                        <div class="role-box">Senior Developer</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-24">
+            <h2 class="role-divider text-4xl font-black uppercase italic">Developer</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 justify-items-center">
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Charles.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Charles Edward Tapales</div>
+                        <div class="role-box">Developer</div>
+                    </div>
+                </div>
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Elijah.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Elijah Kean Laqui</div>
+                        <div class="role-box">Developer</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-24">
+            <h2 class="role-divider text-4xl font-black uppercase italic">Designer</h2>
+            <div class="flex justify-center">
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Andrew.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Andrew Jethro Santiago</div>
+                        <div class="role-box">Designer</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-24">
+            <h2 class="role-divider text-4xl font-black uppercase italic">Tester</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 justify-items-center">
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Angela.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Angela Panto</div>
+                        <div class="role-box">Tester</div>
+                    </div>
+                </div>
+                <div class="profile-card">
+                    <div class="video-wrapper">
+                        <video class="profile-video" autoplay muted loop playsinline><source src="Syreel.mp4" type="video/mp4"></video>
+                    </div>
+                    <div class="info-pallet">
+                        <div class="name-box">Syreel Montajes</div>
+                        <div class="role-box">Tester</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-24">
+            <h2 class="role-divider text-4xl font-black uppercase italic">Our Story</h2>
+            <div class="max-w-4xl mx-auto text-center">
+                <p class="text-2xl leading-relaxed text-gray-700 italic font-medium">
+                    "In modern era, technology has been continously growing that influences all aspects of our everyday living, entertainment, communication, comfortability and even our basic needs, along with technology comes the cooking that invents different styles of culinary masterpiece. Here at FridgeWise, you dont have to worry about thinking of the same meal, you don't have to think for the same meal twice!"
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- LEFT SIDEBAR (Navigation) - identical to index.html -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-[60]">
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-10">
+                <img src="FridgeWise.png" alt="FridgeWise Logo" class="sidebar-logo">
+                <button id="sidebarClose" class="text-gray-400 hover:text-red-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a href="index.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> Home
+                </a>
+                <a href="maindashboard.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg> Main Dashboard
+                </a>
+                <a href="secondarydashboard.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg> Second Dashboard
+                </a>
+                <div class="my-4 border-t border-gray-100"></div>
+                <a href="cookinghistory.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Cooking History
+                </a>
+                <a href="favoritemeal.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> Favorite Recipes
+                </a>
+                <!-- Active page: About Us (highlighted) -->
+                <a href="aboutus.html" class="flex items-center py-3 px-4 rounded-xl bg-green-50 text-green-900 border-l-4 border-green-600 font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> About Us
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- RIGHT USER SIDEBAR (Profile & Logout) -->
+    <div id="userSidebar" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-[60] border-l border-gray-100">
+        <div class="p-8 flex flex-col h-full">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-xl font-bold text-gray-800 uppercase italic tracking-tighter">Profile</h2>
+                <button id="userSidebarClose" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="text-center mb-8 bg-green-50 py-6 rounded-2xl border border-green-100">
+                <div class="w-20 h-20 bg-white rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm border-2 border-green-200">
+                    <span id="userInitial" class="text-2xl font-bold text-green-700 uppercase">?</span>
+                </div>
+                <h3 id="userNameDisplay" class="text-lg font-bold text-gray-900 px-4 break-words">Loading...</h3>
+                <p id="userEmailDisplay" class="text-xs text-gray-500 px-4 break-all italic">...</p>
+            </div>
+            <div class="border-t border-gray-100 my-4"></div>
+            <nav class="space-y-2">
+                <a href="accountdetails.html" class="flex items-center justify-between w-full p-4 rounded-xl text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-all group border border-transparent hover:border-blue-100">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        <span class="font-bold text-sm uppercase tracking-tight">Account Details</span>
+                    </div>
+                    <svg class="w-4 h-4 text-gray-300 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+            </nav>
+            <button id="logoutBtn" class="hidden w-full mt-auto bg-red-50 text-red-600 font-bold py-4 rounded-xl hover:bg-red-100 flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                LOGOUT
+            </button>
+        </div>
+    </div>
+
+    <!-- Overlay for both sidebars -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 z-50"></div>
+
+    <!-- Firebase + Sidebar Logic (copied from index.html, adapted for aboutus) -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            authDomain: "fridgewise-37166.firebaseapp.com",
+            projectId: "fridgewise-37166",
+            storageBucket: "fridgewise-37166.firebasestorage.app",
+            messagingSenderId: "367251387454",
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        function fetchAndDisplayUserProfile(user) {
+            if (!user) return;
+            db.ref('users/' + user.uid).once('value').then((snapshot) => {
+                const userData = snapshot.val();
+                let displayName = userData?.username || userData?.name || user.email.split('@')[0] || "User";
+                updateProfileUI(displayName, user.email);
+            }).catch(err => console.warn("Profile fetch error:", err));
+        }
+
+        function updateProfileUI(name, email) {
+            document.getElementById('userNameDisplay').textContent = name;
+            document.getElementById('userEmailDisplay').textContent = email;
+            document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+        }
+
+        // Handle auth state: show/hide left sidebar toggle button, logout button, and update profile
+        auth.onAuthStateChanged((user) => {
+            const leftSidebarContainer = document.getElementById('leftSidebarContainer');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (user) {
+                // Logged in: show sidebar toggle, show logout button, fetch profile
+                if (leftSidebarContainer) leftSidebarContainer.classList.remove('hidden');
+                if (logoutBtn) logoutBtn.classList.remove('hidden');
+                fetchAndDisplayUserProfile(user);
+            } else {
+                // Logged out: hide sidebar toggle, hide logout button, show guest profile
+                if (leftSidebarContainer) leftSidebarContainer.classList.add('hidden');
+                if (logoutBtn) logoutBtn.classList.add('hidden');
+                updateProfileUI("Guest", "Please sign in");
+            }
+        });
+
+        // Sidebar elements
+        const sidebar = document.getElementById('sidebar');
+        const userSidebar = document.getElementById('userSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        function closeAll() {
+            if (sidebar) sidebar.classList.add('-translate-x-full');
+            if (userSidebar) userSidebar.classList.add('translate-x-full');
+            if (overlay) overlay.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+
+        // Toggle left sidebar
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                if (sidebar) sidebar.classList.remove('-translate-x-full');
+                if (overlay) overlay.classList.add('opacity-100', 'pointer-events-auto');
+            });
+        }
+
+        // Toggle user sidebar
+        const userMenuToggle = document.getElementById('userMenuToggle');
+        if (userMenuToggle) {
+            userMenuToggle.addEventListener('click', () => {
+                if (userSidebar) userSidebar.classList.remove('translate-x-full');
+                if (overlay) overlay.classList.add('opacity-100', 'pointer-events-auto');
+            });
+        }
+
+        // Close triggers: overlay, sidebar close button, user sidebar close button
+        const sidebarClose = document.getElementById('sidebarClose');
+        const userSidebarClose = document.getElementById('userSidebarClose');
+        
+        if (overlay) overlay.addEventListener('click', closeAll);
+        if (sidebarClose) sidebarClose.addEventListener('click', closeAll);
+        if (userSidebarClose) userSidebarClose.addEventListener('click', closeAll);
+
+        // Logout functionality
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error("Logout error:", error);
+                });
+            });
+        }
+
+        // Optional: preload / ensure videos in about section autoplay if needed
+        document.querySelectorAll('.profile-video').forEach(video => {
+            video.play().catch(e => console.log("Profile video autoplay blocked:", e));
+        });
+    </script>
+</body>
+</html>

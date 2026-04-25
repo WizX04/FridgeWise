@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FridgeWise - Verify Email</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body class="bg-[#f0fff4] font-sans antialiased text-gray-900">
+
+    <div class="flex flex-col min-h-screen">
+        <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+            <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="register.html" class="text-gray-600 hover:text-gray-900 p-2 transition-colors">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </a>
+                    <div class="h-8 border-l border-green-300 mx-4"></div>
+                    <span class="font-bold text-green-800 text-xl uppercase tracking-tighter">FridgeWise</span>
+                </div>
+            </nav>
+        </header>
+
+        <main class="flex-grow flex items-center justify-center py-12 px-4">
+            <div class="w-full max-w-md bg-white p-10 rounded-3xl shadow-xl border border-green-100 text-center">
+                <div class="mb-8 flex justify-center">
+                    <div class="bg-green-50 p-6 rounded-full border border-green-100 shadow-inner">
+                        <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L22 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-3 uppercase italic tracking-tighter">Verification</h1>
+                <p class="text-sm text-gray-500 mb-8 leading-relaxed">We are sending a 6-digit code to your email address.</p>
+                <div class="mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm">
+                    <label class="text-[10px] font-bold text-green-600 uppercase tracking-[0.2em] block mb-1">Sending to:</label>
+                    <div id="emailDisplay" class="font-bold text-gray-800 break-all text-lg italic text-center">Loading...</div>
+                </div>
+                <button id="sendBtn" class="w-full bg-[#2b87da] text-white font-bold py-4 rounded-2xl uppercase tracking-[0.15em] hover:bg-blue-600 shadow-lg shadow-blue-100 transition-all active:scale-95 text-sm">
+                    SEND VERIFICATION CODE
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // CHANGE 1: DOUBLE CHECK THIS PUBLIC KEY
+        emailjs.init("DcrQMridVUedYQcbl");
+
+        const sendBtn = document.getElementById('sendBtn');
+        const emailDisplay = document.getElementById('emailDisplay');
+        const pendingUser = JSON.parse(sessionStorage.getItem('pendingUser'));
+
+        if (!pendingUser) {
+            window.location.href = "register.html";
+        } else {
+            emailDisplay.innerText = pendingUser.email;
+        }
+
+        sendBtn.addEventListener('click', () => {
+            const generatedCode = Math.floor(100000 + Math.random() * 900000);
+            sendBtn.innerText = "SENDING...";
+            sendBtn.disabled = true;
+
+            const templateParams = {
+                to_email: pendingUser.email,
+                to_name: pendingUser.username,
+                code: generatedCode // Matches {{code}} in your template
+            };
+
+            // CHANGE 2: VERIFY THESE TWO IDs FROM YOUR DASHBOARD
+            emailjs.send('service_s9ai3m3', 'template_89fhvyh', templateParams)
+                .then(() => {
+                    localStorage.setItem('regVerifyCode', generatedCode.toString());
+                    alert("Verification code sent!");
+                    window.location.href = "createaccountcode2.html";
+                })
+                .catch((err) => {
+                    console.error("EmailJS Error:", err);
+                    alert("Error: " + err.text);
+                    sendBtn.innerText = "SEND VERIFICATION CODE";
+                    sendBtn.disabled = false;
+                });
+        });
+    </script>
+</body>
+</html>

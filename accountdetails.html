@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Details - FridgeWise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <style>
+        /* Sidebar logo styling - adapted from index.html */
+        .sidebar-logo {
+            height: 50px;
+            width: auto;
+            mix-blend-mode: multiply;
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-[#f0fff4] font-sans antialiased text-gray-900 overflow-x-hidden">
+
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-[60]">
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-10">
+                <img src="FridgeWise.png" alt="FridgeWise Logo" class="sidebar-logo">
+                <button id="sidebarClose" class="text-gray-400 hover:text-red-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a href="index.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> 
+                    Home
+                </a>
+
+                <a href="maindashboard.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg> 
+                    Main Dashboard
+                </a>
+
+                <a href="secondarydashboard.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg> 
+                    Second Dashboard
+                </a>
+
+                <div class="my-4 border-t border-gray-100"></div>
+
+                <a href="cookinghistory.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Cooking History
+                </a>
+                <a href="favoritemeal.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> 
+                    Favorite Recipes
+                </a>
+
+                <a href="aboutus.html" class="flex items-center py-3 px-4 rounded-xl text-gray-700 hover:bg-green-100 hover:text-green-900 transition-colors font-semibold">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    About Us
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div id="userSidebar" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-[60] border-l border-gray-100">
+        <div class="p-8 flex flex-col h-full">
+            <div class="flex items-center justify-between mb-8">
+                <img src="FridgeWise.png" alt="FridgeWise Logo" class="sidebar-logo">
+                <button id="userSidebarClose" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="text-center mb-8 bg-green-50 py-6 rounded-2xl border border-green-100">
+                <div class="w-20 h-20 bg-white rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm border-2 border-green-200">
+                    <span id="sidebarInitial" class="text-2xl font-bold text-green-700 uppercase">?</span>
+                </div>
+                <h3 id="sidebarName" class="text-lg font-bold text-gray-900 px-4 break-words">Loading...</h3>
+                <p id="sidebarEmail" class="text-xs text-gray-500 px-4 break-all italic">...</p>
+            </div>
+            <div class="border-t border-gray-100 my-4"></div>
+            <nav class="space-y-2">
+                <a href="accountdetails.html" class="flex items-center justify-between w-full p-4 rounded-xl text-gray-700 bg-blue-50 text-blue-700 transition-all group border border-blue-100">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        <span class="font-bold text-sm uppercase tracking-tight">Account Details</span>
+                    </div>
+                    <svg class="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+            </nav>
+            <button id="logoutBtn" class="w-full mt-auto bg-red-50 text-red-600 font-bold py-4 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                LOGOUT
+            </button>
+        </div>
+    </div>
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 z-50"></div>
+
+    <div class="flex flex-col min-h-screen">
+        <header class="bg-[#dcfce7] border-b border-green-200 shadow-sm sticky top-0 z-50">
+            <nav class="max-w-[1440px] mx-auto px-6 py-3 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div id="leftSidebarContainer" class="hidden flex items-center">
+                        <button id="sidebarToggle" class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 transition-colors">
+                            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+                        <div class="h-8 border-l border-green-300 mx-4"></div>
+                    </div>
+                    <span id="brandLogo" class="font-bold text-green-800 text-xl ml-2 uppercase tracking-tighter">FridgeWise</span>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button id="userMenuToggle" class="text-gray-700 bg-white hover:bg-gray-50 rounded-full p-1.5 border border-gray-300 shadow-sm">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <main class="flex-grow flex items-start justify-center py-12 px-6">
+            <div class="max-w-2xl w-full bg-white rounded-3xl shadow-xl border border-green-100 overflow-hidden">
+                <div class="bg-green-600 p-8 text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h1 class="text-3xl font-bold italic uppercase tracking-tighter">Account Details</h1>
+                        <p class="opacity-90 text-sm">Review and update your FridgeWise profile information.</p>
+                    </div>
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-green-500 rounded-full opacity-50"></div>
+                </div>
+
+                <div class="p-8 space-y-8">
+                    <div class="flex items-center gap-6 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center shadow-inner">
+                            <span id="accInitial" class="text-2xl font-bold text-green-700">?</span>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-green-600 uppercase tracking-widest block mb-1">Username</label>
+                            <p id="accUsername" class="text-xl font-bold text-gray-800">Loading...</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1 px-2">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Registered Email</label>
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <p id="accEmail" class="text-lg font-medium text-gray-700 italic">...</p>
+                            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1 px-2">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Password</label>
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <p class="text-lg text-gray-800 tracking-widest font-mono">••••••••••••</p>
+                            <button onclick="togglePasswordModal()" class="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all border border-blue-100 uppercase tracking-tighter">
+                                Change Password
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1 px-2">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Date of Birth</label>
+                        <div class="border-b border-gray-100 pb-3">
+                            <p id="accDob" class="text-lg text-gray-700">...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="passwordModal" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden flex items-center justify-center z-[100] p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl transform transition-all">
+            <h3 class="text-xl font-bold text-gray-800 mb-2 uppercase italic tracking-tighter text-center">Security Update</h3>
+            <p class="text-xs text-gray-500 text-center mb-6">Verify your identity to change password.</p>
+            
+            <form id="passwordUpdateForm" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Current Password</label>
+                    <input type="password" id="currentPassword" required placeholder="••••••••" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400 transition-all font-mono text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">New Password</label>
+                    <input type="password" id="newPassword" required placeholder="At least 6 characters" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400 transition-all font-mono text-sm">
+                </div>
+
+                <div class="flex flex-col gap-2 pt-2">
+                    <button type="submit" id="confirmUpdateBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 uppercase tracking-widest text-xs transition-all">
+                        Update Password
+                    </button>
+                    <button type="button" onclick="togglePasswordModal()" class="w-full text-gray-500 font-bold py-3 hover:text-gray-800 uppercase tracking-widest text-[10px]">Cancel</button>
+                </div>
+            </form>
+
+            <div id="successUI" class="hidden flex flex-col items-center py-6 border-4 border-dashed border-green-500 rounded-2xl bg-green-50">
+                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <p class="text-green-700 font-bold text-center px-4">Your password has successfully been changed</p>
+                <button type="button" onclick="togglePasswordModal()" class="mt-4 text-xs font-bold text-green-600 uppercase underline">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZl_HJXjKdycYfYfb4rH7Pue6vwJ9G-KM",
+            authDomain: "fridgewise-37166.firebaseapp.com",
+            projectId: "fridgewise-37166",
+            storageBucket: "fridgewise-37166.firebasestorage.app",
+            messagingSenderId: "367251387454",
+            appId: "1:367251387454:web:ed536522f271197b3d0d6f"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // --- Auth State Handler ---
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            document.getElementById('accEmail').textContent = user.email;
+            document.getElementById('sidebarEmail').textContent = user.email;
+
+            db.ref('users/' + user.uid).once('value').then((snapshot) => {
+                const userData = snapshot.val();
+                if (userData) {
+                    const name = userData.username || "User";
+                    const dob = userData.dob || "Not set";
+                    
+                    document.getElementById('accUsername').textContent = name;
+                    document.getElementById('accDob').textContent = dob;
+                    document.getElementById('sidebarName').textContent = name;
+                    
+                    const initial = name.charAt(0).toUpperCase();
+                    document.getElementById('accInitial').textContent = initial;
+                    document.getElementById('sidebarInitial').textContent = initial;
+                }
+            });
+
+            document.getElementById('leftSidebarContainer').classList.remove('hidden');
+            document.getElementById('brandLogo').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+        });
+
+        // --- Password Modal Functions ---
+        function togglePasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            const formUI = document.getElementById('passwordUpdateForm');
+            const successUI = document.getElementById('successUI');
+            
+            modal.classList.toggle('hidden');
+            
+            if(modal.classList.contains('hidden')) {
+                formUI.classList.remove('hidden');
+                successUI.classList.add('hidden');
+                document.getElementById('currentPassword').value = "";
+                document.getElementById('newPassword').value = "";
+            }
+        }
+
+        // --- Password Change Logic (UPDATED TO SYNC DB) ---
+        document.getElementById('passwordUpdateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const user = auth.currentUser;
+            const currentPwd = document.getElementById('currentPassword').value;
+            const newPwd = document.getElementById('newPassword').value;
+            const btn = document.getElementById('confirmUpdateBtn');
+
+            if (newPwd.length < 6) return alert("New password must be at least 6 characters.");
+
+            btn.innerText = "VERIFYING...";
+            btn.disabled = true;
+
+            try {
+                // 1. Re-authenticate with real Firebase Auth
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd);
+                await user.reauthenticateWithCredential(credential);
+                
+                // 2. Update real Firebase Auth password
+                await user.updatePassword(newPwd);
+
+                // 3. THE FIX: Update the 'pass' field in your database
+                // This ensures forgotpassword/changepassword pages stay in sync.
+                await db.ref('users/' + user.uid).update({
+                    pass: newPwd
+                });
+
+                // Show success UI
+                document.getElementById('passwordUpdateForm').classList.add('hidden');
+                document.getElementById('successUI').classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                if (error.code === 'auth/wrong-password') {
+                    alert("The current password you entered is incorrect.");
+                } else {
+                    alert("Update failed: " + error.message);
+                }
+            } finally {
+                btn.innerText = "UPDATE PASSWORD";
+                btn.disabled = false;
+            }
+        });
+
+        // --- Sidebar Logic ---
+        const sidebar = document.getElementById('sidebar');
+        const userSidebar = document.getElementById('userSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        function closeAll() {
+            sidebar.classList.add('-translate-x-full');
+            userSidebar.classList.add('translate-x-full');
+            overlay.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+
+        document.getElementById('sidebarToggle').onclick = () => {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.add('opacity-100', 'pointer-events-auto');
+        };
+        document.getElementById('userMenuToggle').onclick = () => {
+            userSidebar.classList.remove('translate-x-full');
+            overlay.classList.add('opacity-100', 'pointer-events-auto');
+        };
+        document.getElementById('sidebarClose').onclick = closeAll;
+        document.getElementById('userSidebarClose').onclick = closeAll;
+        overlay.onclick = closeAll;
+
+        document.getElementById('logoutBtn').onclick = () => {
+            auth.signOut().then(() => window.location.href = 'index.html');
+        };
+    </script>
+</body>
+</html>
