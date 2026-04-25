@@ -626,63 +626,43 @@ function openMealFromUrl(mealName) {
                 </li>`).join('');
         }
 
-   async function openMealOverview(name) {
-    const user = firebase.auth().currentUser;
+        async function openMealOverview(name) {
+            if (!currentUser) { alert("Please log in first!"); return; }
+            currentMealName = name;
+            const historyRef = database.ref(`users/${currentUser.uid}/history`).push();
+            historyRef.set({ name: name, ingredients: ingredients.length > 0 ? ingredients.join(", ") : "None specified", cookedAt: Date.now() });
+            document.getElementById('mainDashboard').classList.add('hidden');
+            document.getElementById('mealOverview').classList.remove('hidden');
+            document.getElementById('overviewMealName').innerText = name;
+            const mealId = name.replace(/[.#$/[\]]/g, "_");
+            database.ref(`users/${currentUser.uid}/favorites/${mealId}`).once('value', s => setStarState(s.exists()));
+            document.querySelectorAll('.accordion-content').forEach(el => { el.classList.remove('open'); el.innerHTML = ""; });
+            document.querySelectorAll('#accordionGroup span').forEach(s => s.innerText = "+");
+            const descEl = document.getElementById('mealDesc');
+            descEl.innerText = "";
+            const res = await callAI(`Give a short, appetizing 2-sentence Filipino description for ${name}.`);
+            typeWriter(res, descEl);
+        }
 
-    if (!user) {
-        alert("Please log in first!");
-        return;
-    }
+      async function fetchRecipeDetails() {
+    // 1. Pull the name directly from your <h2> or <h1> header 
+    // to ensure we ALWAYS have the current dish name shown on screen.
+    const mealHeader = document.querySelector('h2').innerText; // Adjust selector to your Title ID
+    const mealName = mealHeader.replace('(Mark as favorite)', '').trim();
 
-    currentUser = user;
-    currentMealName = name;
-
-    // Save to history
-    const historyRef = database.ref(`users/${currentUser.uid}/history`).push();
-    historyRef.set({
-        name: name,
-        ingredients: ingredients.length > 0 ? ingredients.join(", ") : "None specified",
-        cookedAt: Date.now()
-    });
-
-    // Switch UI
-    document.getElementById('mainDashboard').classList.add('hidden');
-    document.getElementById('mealOverview').classList.remove('hidden');
-    document.getElementById('overviewMealName').innerText = name;
-
-    // Favorite state
-    const mealId = name.replace(/[.#$/[\]]/g, "_");
-    database.ref(`users/${currentUser.uid}/favorites/${mealId}`)
-        .once('value', s => setStarState(s.exists()));
-
-    // Reset accordion UI
-    document.querySelectorAll('.accordion-content').forEach(el => {
-        el.classList.remove('open');
-        el.innerHTML = "";
-    });
-
-    document.querySelectorAll('#accordionGroup span')
-        .forEach(s => s.innerText = "+");
-
-    // 🔥 IMPORTANT: Fetch full recipe every time
-    fetchRecipeDetails(name);
-}
-
-     async function fetchRecipeDetails(mealName) {
     const mealDesc = document.getElementById('mealDesc');
-
+    
+    // Safety check: If for some reason the name is empty, stop the fetch.
     if (!mealName || mealName === "") {
-        console.error("Meal name missing!");
+        console.error("Meal name is missing!");
         return;
     }
 
-    mealDesc.innerHTML = `<span class="text-blue-500 animate-pulse">
-        Chef Linguini is preparing ${mealName}...
-    </span>`;
+    mealDesc.innerHTML = `<span class="text-blue-500 animate-pulse">Chef Linguini is preparing ${mealName}...</span>`;
 
     const payload = {
-        contents: [{
-            parts: [{ text: `Provide a full recipe for: ${mealName}` }]
+        contents: [{ 
+            parts: [{ text: `Provide a full recipe for: ${mealName}` }] 
         }],
         generationConfig: {
             response_mime_type: "application/json",
@@ -701,18 +681,16 @@ function openMealFromUrl(mealName) {
     };
 
     try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${firebaseConfig.apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }
-        );
+        // Use the Gemini 3.1 Flash-Lite endpoint for better reliability in deployments
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${firebaseConfig.apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
         const data = await response.json();
-
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
             const recipe = JSON.parse(data.candidates[0].content.parts[0].text);
             updateDashboardUI(recipe);
         }
